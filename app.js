@@ -91,7 +91,7 @@ C 1 5 6- 4 1 5 6- 4
 
 B 4sus 5 6- 1
 #Suspended and diminished
-4 5 7o 1
+4sus2 5sus4 7o 1
 2- 5/1 <1>
 #Inversion above
 
@@ -142,18 +142,24 @@ TA 5 5 4 4 1`;
                     needsSpace = true;
                 }
                 // Case 4: Number after "s" for suspended (e.g., "1s4" -> "1s 4")
+                // But NOT if we're typing "2" or "4" after "sus" (for sus2/sus4)
                 else if (charBefore === 's') {
                     // Check if it's part of "sus" (3 chars back should be 'u')
                     const threeBack = beforeCursor.length >= 4 ? beforeCursor[beforeCursor.length - 3] : '';
-                    if (threeBack !== 'u') {
+                    if (threeBack === 'u') {
+                        // It's "sus", allow 2 or 4 for sus2/sus4, space otherwise
+                        if (justTyped !== '2' && justTyped !== '4') {
+                            needsSpace = true;
+                        }
+                    } else {
                         // It's just "s", not "sus", so space
                         needsSpace = true;
                     }
                 }
-                // Case 5: Number after "sus" for suspended (e.g., "1sus4" -> "1sus 4")
-                else if (beforeCursor.length >= 4) {
-                    const last3 = beforeCursor.substring(beforeCursor.length - 4, beforeCursor.length - 1);
-                    if (last3 === 'sus') {
+                // Case 5: Number after "sus2" or "sus4" (e.g., "1sus24" -> "1sus2 4")
+                else if (beforeCursor.length >= 5) {
+                    const last4 = beforeCursor.substring(beforeCursor.length - 5, beforeCursor.length - 1);
+                    if (last4 === 'sus2' || last4 === 'sus4') {
                         needsSpace = true;
                     }
                 }
@@ -310,8 +316,14 @@ TA 5 5 4 4 1`;
             inversion = parts[1];
         }
 
-        // Check for suspended
-        if (remaining.endsWith('sus')) {
+        // Check for suspended (sus2, sus4, sus, or just s)
+        if (remaining.endsWith('sus2')) {
+            suspended = 'sus2';
+            remaining = remaining.slice(0, -4);
+        } else if (remaining.endsWith('sus4')) {
+            suspended = 'sus4';
+            remaining = remaining.slice(0, -4);
+        } else if (remaining.endsWith('sus')) {
             suspended = 'sus';
             remaining = remaining.slice(0, -3);
         } else if (remaining.endsWith('s')) {
