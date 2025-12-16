@@ -32,7 +32,8 @@ body {
 .font-handwriting .songwriter-credit,
 .font-handwriting .charted-by-credit,
 .font-handwriting .repeat-marker,
-.font-handwriting .bar-comment {
+.font-handwriting .bar-comment,
+.font-handwriting .chart-header-comment {
     font-family: 'Kalam', cursive;
 }
 
@@ -53,7 +54,8 @@ body {
 .font-shadows .songwriter-credit,
 .font-shadows .charted-by-credit,
 .font-shadows .repeat-marker,
-.font-shadows .bar-comment {
+.font-shadows .bar-comment,
+.font-shadows .chart-header-comment {
     font-family: 'Shadows Into Light', cursive;
 }
 
@@ -74,7 +76,8 @@ body {
 .font-mansalva .songwriter-credit,
 .font-mansalva .charted-by-credit,
 .font-mansalva .repeat-marker,
-.font-mansalva .bar-comment {
+.font-mansalva .bar-comment,
+.font-mansalva .chart-header-comment {
     font-family: 'Mansalva', cursive;
 }
 
@@ -95,7 +98,8 @@ body {
 .font-helvetica .songwriter-credit,
 .font-helvetica .charted-by-credit,
 .font-helvetica .repeat-marker,
-.font-helvetica .bar-comment {
+.font-helvetica .bar-comment,
+.font-helvetica .chart-header-comment {
     font-family: Helvetica, Arial, sans-serif;
 }
 
@@ -569,16 +573,31 @@ header h1 {
     top: 0.2em;
 }
 
+/* Chart Header Comment */
+.chart-header-comment {
+    text-align: left;
+    font-size: 16px;
+    font-style: italic;
+    color: #555;
+    margin: 0px auto 0px auto;
+    padding: 0px 50px;
+    max-width: fit-content;
+    line-height: 1.4;
+}
+
 /* Chart Content */
 .chart-content {
     margin-top: 20px;
     flex: 1;
+    min-height: 0;
 }
 
 .chart-content.two-column {
     column-count: 2;
     column-gap: 40px;
     column-rule: 2px solid #333;
+    column-fill: auto;
+    height: 100%;
 }
 
 .chart-section {
@@ -589,8 +608,8 @@ header h1 {
 
 .section-wrapper {
     display: grid;
-    grid-template-columns: auto 1fr;
-    gap: 15px;
+    grid-template-columns: 60px 1fr;
+    gap: 0;
     align-items: start;
 }
 
@@ -623,7 +642,7 @@ header h1 {
 .chart-bars {
     display: grid;
     grid-template-columns: repeat(4, auto);
-    gap: 5px 15px;
+    gap: 5px 5px;
     align-items: center;
 }
 
@@ -649,7 +668,7 @@ header h1 {
 
 .tied-chord {
     text-decoration: underline;
-    letter-spacing: 1px;
+    letter-spacing: 0px;
     position: relative;
 }
 
@@ -963,6 +982,7 @@ header h1 {
     .chart-content.two-column {
         column-count: 2;
         column-gap: 30px;
+        column-fill: auto;
     }
 
     .chart-section {

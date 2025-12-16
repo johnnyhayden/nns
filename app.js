@@ -72,7 +72,8 @@ class NNSChartApp {
         this.songwriterInput.value = 'Larry Laffer';
         this.chartedByInput.value = 'John Hayden';
 
-        const demoChart = `I: 1 5 6- 4
+        const demoChart = `#This is a demonstration chart showing various notation features
+I: 1 5 6- 4
 I: 1 5 6- 4
 
 v1: 1 4 5 1
@@ -123,6 +124,45 @@ Tag: 1'_4''' 1''_4'_5' <1>
                 // Get the character before the number we just typed
                 const beforeCursor = text.substring(0, cursorPos);
                 const charBefore = beforeCursor.length >= 2 ? beforeCursor[beforeCursor.length - 2] : '';
+
+                // Check if we just started a new line with a number (auto-indent)
+                if (charBefore === '\n' || (cursorPos === 1 && beforeCursor === justTyped)) {
+                    // Find the previous line
+                    const lines = beforeCursor.split('\n');
+                    if (lines.length >= 2) {
+                        const previousLine = lines[lines.length - 2];
+
+                        // Find where the first chord starts in the previous line
+                        // Skip section labels (format: "X:" or "XX:" etc.)
+                        const sectionMatch = previousLine.match(/^([A-Za-z0-9]{1,4}):+\s*/);
+                        let firstChordPos = 0;
+
+                        if (sectionMatch) {
+                            // Previous line has a section label, find first chord after it
+                            const afterLabel = previousLine.substring(sectionMatch[0].length);
+                            const firstChordMatch = afterLabel.match(/\d/);
+                            if (firstChordMatch) {
+                                firstChordPos = sectionMatch[0].length + firstChordMatch.index;
+                            }
+                        } else {
+                            // No section label, find first number
+                            const firstChordMatch = previousLine.match(/\d/);
+                            if (firstChordMatch) {
+                                firstChordPos = firstChordMatch.index;
+                            }
+                        }
+
+                        // Add spaces to align with the first chord position
+                        if (firstChordPos > 0) {
+                            const spaces = ' '.repeat(firstChordPos);
+                            const newText = text.substring(0, cursorPos - 1) + spaces + justTyped + text.substring(cursorPos);
+                            textarea.value = newText;
+                            textarea.selectionStart = textarea.selectionEnd = cursorPos + firstChordPos;
+                            this.updatePreview();
+                            return;
+                        }
+                    }
+                }
 
                 // Check if we need to insert a space
                 let needsSpace = false;
@@ -181,6 +221,8 @@ Tag: 1'_4''' 1''_4'_5' <1>
         const sections = [];
         let currentSection = null;
         let pendingStartRepeat = false;
+        let headerComment = null;
+        let isFirstLine = true;
 
         for (const line of lines) {
             const trimmed = line.trim();
@@ -189,13 +231,23 @@ Tag: 1'_4''' 1''_4'_5' <1>
             // Check if this is a comment line
             if (trimmed.startsWith('#')) {
                 const comment = trimmed.substring(1).trim();
-                // Attach comment to the last bar in current section
+
+                // If this is the first line, treat it as a header comment
+                if (isFirstLine) {
+                    headerComment = comment;
+                    isFirstLine = false;
+                    continue;
+                }
+
+                // Otherwise, attach comment to the last bar in current section
                 if (currentSection && currentSection.bars.length > 0) {
                     const lastBar = currentSection.bars[currentSection.bars.length - 1];
                     lastBar.comment = comment;
                 }
                 continue;
             }
+
+            isFirstLine = false;
 
             // Check if this is a start repeat marker
             if (trimmed === '||:') {
@@ -271,7 +323,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
             }
         }
 
-        return sections;
+        return { sections, headerComment };
     }
 
     processSectionLabel(label) {
@@ -702,7 +754,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
         }
     }
 
-    renderChart(sections, metadata, twoColumn = false) {
+    renderChart(sections, metadata, twoColumn = false, headerComment = null) {
         let html = '';
 
         // Render header with title centered and tempo/key on right
@@ -734,6 +786,11 @@ Tag: 1'_4''' 1''_4'_5' <1>
         html += '</div>';
 
         html += '</div>';
+
+        // Render header comment if present
+        if (headerComment) {
+            html += `<div class="chart-header-comment">${this.escapeHtml(headerComment)}</div>`;
+        }
 
         // Render chart content
         const columnClass = twoColumn ? 'two-column' : '';
@@ -859,7 +916,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
         // Render footer with songwriter and charted by at bottom right
         html += '<div class="chart-footer">';
         if (metadata.songwriter) {
-            html += `<div class="songwriter-credit">artist: ${this.escapeHtml(metadata.songwriter)}</div>`;
+            html += `<div class="songwriter-credit">${this.escapeHtml(metadata.songwriter)}</div>`;
         }
         if (metadata.chartedBy) {
             html += `<div class="charted-by-credit">chart by: ${this.escapeHtml(metadata.chartedBy)}</div>`;
@@ -880,18 +937,25 @@ Tag: 1'_4''' 1''_4'_5' <1>
         };
 
         const chartText = this.chartInput.value;
-        const sections = this.parseChart(chartText);
+        const { sections, headerComment } = this.parseChart(chartText);
         const twoColumn = this.twoColumnToggle.checked;
         const selectedFont = this.fontSelect.value;
         const selectedSize = this.fontSizeSelect.value;
 
-        const html = this.renderChart(sections, metadata, twoColumn);
+        const html = this.renderChart(sections, metadata, twoColumn, headerComment);
         this.chartPreview.innerHTML = html;
         this.printView.innerHTML = html;
 
         // Apply font and size classes
         this.chartPreview.className = `chart-preview font-${selectedFont} size-${selectedSize}`;
         this.printView.className = `print-only font-${selectedFont} size-${selectedSize}`;
+
+        // Update document title for PDF filename
+        if (metadata.title && metadata.title.trim()) {
+            document.title = `${metadata.title} Chart`;
+        } else {
+            document.title = 'Nashville Number System Chart Maker';
+        }
 
         // Auto-save to localStorage on any change
         this.autoSave();
@@ -923,7 +987,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
                 this.tempoInput.value = data.tempo || '';
                 this.timeInput.value = data.time || '';
                 this.songwriterInput.value = data.songwriter || '';
-                this.chartedByInput.value = data.chartedBy || 'John Hayden';
+                this.chartedByInput.value = data.chartedBy || '';
                 this.chartInput.value = data.chart || '';
                 this.twoColumnToggle.checked = data.twoColumn !== undefined ? data.twoColumn : true;
                 this.fontSelect.value = data.font || 'handwriting';
@@ -982,7 +1046,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
         this.tempoInput.value = '';
         this.timeInput.value = '';
         this.songwriterInput.value = '';
-        this.chartedByInput.value = 'John Hayden';
+        this.chartedByInput.value = '';
         this.chartInput.value = '';
         this.twoColumnToggle.checked = true;
         this.fontSelect.value = 'handwriting';
@@ -997,7 +1061,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
         this.currentChartId = chartId;
         this.titleInput.value = chart.title || '';
         this.songwriterInput.value = chart.songwriter || '';
-        this.chartedByInput.value = chart.chartedBy || 'John Hayden';
+        this.chartedByInput.value = chart.chartedBy || '';
         this.keyInput.value = chart.key || '';
         this.tempoInput.value = chart.tempo || '';
         this.timeInput.value = chart.time || '';
