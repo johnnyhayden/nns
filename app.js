@@ -4,7 +4,6 @@ class NNSChartApp {
     constructor() {
         this.currentChartId = null;
         this.charts = this.loadChartsFromStorage();
-        this.optimizationEnabled = false;
         this.initializeElements();
         this.attachEventListeners();
         this.renderSavedCharts();
@@ -31,7 +30,6 @@ class NNSChartApp {
         // Buttons
         this.saveBtn = document.getElementById('save-chart-btn');
         this.newBtn = document.getElementById('new-chart-btn');
-        this.optimizeBtn = document.getElementById('optimize-btn');
         this.printBtn = document.getElementById('print-btn');
 
         // Saved charts list
@@ -54,7 +52,6 @@ class NNSChartApp {
         // Button events
         this.saveBtn.addEventListener('click', () => this.saveChart());
         this.newBtn.addEventListener('click', () => this.newChart());
-        this.optimizeBtn.addEventListener('click', () => this.optimizeChart());
         this.printBtn.addEventListener('click', () => this.printChart());
 
         // Demo link
@@ -90,7 +87,7 @@ C: 17 5 6- 4
 
 v2: 1^ 4^ 5^ 1^
 #Staccato and push notation
-1 <4 5> 1
+1 4< 5> 1
 
 B: 4sus 5/1 7o 1
 #Suspended, inversion, diminished
@@ -232,10 +229,9 @@ Tag: 1'_4''' 1''_4'_5' <1>
 
                 // If there's content after the label, add it as bars
                 if (content.trim()) {
-                    if (!currentSection || currentSection.name.abbr !== sectionName.abbr) {
-                        currentSection = { name: sectionName, bars: [] };
-                        sections.push(currentSection);
-                    }
+                    // Always create a new section when label has content on same line
+                    currentSection = { name: sectionName, bars: [] };
+                    sections.push(currentSection);
                     const bars = this.parseBars(content);
                     // Apply pending start repeat to first bar
                     if (pendingStartRepeat && bars.length > 0) {
@@ -273,11 +269,6 @@ Tag: 1'_4''' 1''_4'_5' <1>
                     currentSection.bars.push(...bars);
                 }
             }
-        }
-
-        // Apply optimization if enabled
-        if (this.optimizationEnabled) {
-            return this.optimizeSections(sections);
         }
 
         return sections;
@@ -363,11 +354,11 @@ Tag: 1'_4''' 1''_4'_5' <1>
         }
 
         // Check for push notation
-        // Early push: < at the START (e.g., <4)
+        // Early push: < at the END (e.g., 4<)
         // Late push: > at the END (e.g., 5>)
-        if (remaining.startsWith('<')) {
+        if (remaining.endsWith('<')) {
             push = 'early';
-            remaining = remaining.slice(1);
+            remaining = remaining.slice(0, -1);
         } else if (remaining.endsWith('>')) {
             push = 'late';
             remaining = remaining.slice(0, -1);
@@ -428,13 +419,13 @@ Tag: 1'_4''' 1''_4'_5' <1>
         const allBeats = [];
         for (const part of parts) {
             // Check for diamond chord with push notation
-            // Early push diamond: <<5> (push symbol before diamond)
-            // Late push diamond: <5>> (push symbol after diamond)
-            const earlyPushDiamondMatch = part.match(/^<<(.+)>$/);
+            // Early push diamond: <5<> (push symbol < at end before closing >)
+            // Late push diamond: <5>> (push symbol > at end before closing >)
+            const earlyPushDiamondMatch = part.match(/^<(.+)<>$/);
             const latePushDiamondMatch = part.match(/^<(.+)>>$/);
             // Regular held chord: <number>
             const heldMatch = part.match(/^<(.+)>$/);
-            
+
             if (earlyPushDiamondMatch) {
                 // Early push diamond chord
                 const chordNotation = this.parseChordNotation(earlyPushDiamondMatch[1]);
@@ -469,9 +460,43 @@ Tag: 1'_4''' 1''_4'_5' <1>
             }
             // Check if this is a tied chord (contains underscores)
             else if (part.includes('_')) {
-                // Parse each tied chord for push notation
+                // Parse each tied chord, checking for diamonds and push notation
                 const tiedParts = part.split('_');
-                const parsedTiedParts = tiedParts.map(p => this.parseChordNotation(p));
+                const parsedTiedParts = tiedParts.map(p => {
+                    // Check if this tied part is a diamond (held chord)
+                    const heldMatch = p.match(/^<(.+)>$/);
+                    if (heldMatch) {
+                        // It's a held chord within tied notation
+                        return {
+                            held: true,
+                            notation: this.parseChordNotation(heldMatch[1])
+                        };
+                    }
+                    // Regular tied part with potential push notation
+                    return {
+                        held: false,
+                        notation: this.parseChordNotation(p)
+                    };
+                });
+
+                // Validate that total tick marks don't exceed 4 within this beat
+                const totalTicks = parsedTiedParts.reduce((sum, part) => {
+                    return sum + (part.notation?.ticks || 0);
+                }, 0);
+
+                if (totalTicks > 4) {
+                    // Cap tick marks at 4 total - reduce from right to left
+                    let remaining = 4;
+                    for (let i = 0; i < parsedTiedParts.length; i++) {
+                        const part = parsedTiedParts[i];
+                        if (part.notation && part.notation.ticks > 0) {
+                            const allowedTicks = Math.min(part.notation.ticks, remaining);
+                            part.notation.ticks = allowedTicks;
+                            remaining -= allowedTicks;
+                        }
+                    }
+                }
+
                 allBeats.push({
                     value: part,
                     held: false,
@@ -767,7 +792,22 @@ Tag: 1'_4''' 1''_4'_5' <1>
                             // Tied chords are underlined and grouped tightly
                             // Each tied chord can have its own push notation displayed above it
                             if (beat.tiedNotations) {
-                                chordHtml = beat.tiedNotations.map(notation => this.renderTiedChordPart(notation)).join(' ');
+                                chordHtml = beat.tiedNotations.map(tiedPart => {
+                                    if (tiedPart.held) {
+                                        // Render as diamond within tied notation
+                                        const chordContent = this.renderChordWithNotation(tiedPart.notation, false);
+                                        let diamondHtml = `<span class="diamond"><span class="diamond-text">${chordContent}</span></span>`;
+                                        // Wrap diamond with push notation if present
+                                        if (tiedPart.notation && tiedPart.notation.push) {
+                                            const pushSymbol = tiedPart.notation.push === 'early' ? '&lt;' : '&gt;';
+                                            const pushClass = tiedPart.notation.push === 'early' ? 'push-early' : 'push-late';
+                                            return `<span class="chord-with-push"><span class="push-symbol ${pushClass}">${pushSymbol}</span>${diamondHtml}</span>`;
+                                        }
+                                        return diamondHtml;
+                                    }
+                                    // Regular tied part
+                                    return this.renderTiedChordPart(tiedPart.notation);
+                                }).join(' ');
                             } else {
                                 const tiedParts = beat.value.split('_').map(p => this.escapeHtml(p)).join(' ');
                                 chordHtml = tiedParts;
@@ -1039,91 +1079,6 @@ Tag: 1'_4''' 1''_4'_5' <1>
 
     saveChartsToStorage() {
         localStorage.setItem('nns_saved_charts', JSON.stringify(this.charts));
-    }
-
-    optimizeChart() {
-        // Toggle optimization mode
-        this.optimizationEnabled = !this.optimizationEnabled;
-        this.updatePreview();
-
-        const button = this.optimizeBtn;
-        if (this.optimizationEnabled) {
-            button.textContent = 'Optimize ✓';
-            button.classList.add('btn-active');
-        } else {
-            button.textContent = 'Optimize';
-            button.classList.remove('btn-active');
-        }
-    }
-
-    optimizeSections(sections) {
-        const optimizedSections = [];
-        let i = 0;
-
-        while (i < sections.length) {
-            const currentSection = sections[i];
-
-            // Check for repeat opportunities (2+ identical sections)
-            let repeatCount = 1;
-            let j = i + 1;
-
-            // Count consecutive identical sections
-            while (j < sections.length && this.sectionsAreEqual(sections[j], currentSection)) {
-                repeatCount++;
-                j++;
-            }
-
-            if (repeatCount >= 2) {
-                // Create a section with repeat markers
-                const repeatSection = {
-                    name: currentSection.name,
-                    bars: [
-                        { type: 'repeat', marker: 'start', beats: [] },
-                        ...currentSection.bars,
-                        { type: 'repeat', marker: 'end', beats: [] }
-                    ]
-                };
-                optimizedSections.push(repeatSection);
-                // Skip the repeated sections we just processed
-                i += repeatCount;
-            } else {
-                // No repeats found, add the section as-is
-                optimizedSections.push(currentSection);
-                i++;
-            }
-        }
-
-        return optimizedSections;
-    }
-
-    sectionsAreEqual(section1, section2) {
-        // Compare section names
-        if (section1.name?.abbr !== section2.name?.abbr) {
-            return false;
-        }
-
-        // Compare bar count
-        if (section1.bars.length !== section2.bars.length) {
-            return false;
-        }
-
-        // Compare each bar's beats
-        for (let i = 0; i < section1.bars.length; i++) {
-            const bar1 = section1.bars[i];
-            const bar2 = section2.bars[i];
-
-            if (bar1.type !== bar2.type || bar1.beats.length !== bar2.beats.length) {
-                return false;
-            }
-
-            for (let j = 0; j < bar1.beats.length; j++) {
-                if (bar1.beats[j].value !== bar2.beats[j].value) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
     }
 
     printChart() {
