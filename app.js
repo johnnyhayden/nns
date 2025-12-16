@@ -72,45 +72,48 @@ class NNSChartApp {
         this.songwriterInput.value = 'Larry Laffer';
         this.chartedByInput.value = 'John Hayden';
 
-        const demoChart = `I 1 5 6- 4
-I 1 5 6- 4
+        const demoChart = `I: 1 5 6- 4
+I: 1 5 6- 4
 
-V 1 4 5 1
+v1: 1 4 5 1
 #Diamond on the one!
 <1> 4 5 1
 2- 5 1 1
 #Tied chords below
 1_4_5_1 2- 5 1
 
-C 17 5 6- 4
+C: 17 5 6- 4
 #Seventh chord above
 1 5 6- 4
 ||:
-C 1 5 6- 4 1 5 6- 4
+C: 1 5 6- 4 1 5 6- 4
 :||
 
-B 4sus 5 6- 1
+B: 4sus 5 6- 1
 #Suspended and diminished
 4sus2 5sus4 7o 1
 2- 5/1 <1>
 #Inversion and diamond above
 
-V 1 <4 5 1
+V2: 1 <4 5 1
 #Early push on 4
 1 5>_4> 1 5>_4>
 #Late push tied chords
 <<5> 4 <5>> 1
 #Early and late push diamonds
 
-V 1^ 4^ 5^ 1^
+V: 1^ 4^ 5^ 1^
 #Staccato accents above
 17 4-7 5 1
+1'_4''' 1''_4'_5'
+#Beat ticks: 1 beat + 3 beats, then 2+1+1
 
-C 1 5 6- 4
+C: 1 5 6- 4
 1 5^ 6-^ 4
 #Staccato on 5 and 6-
 
-TA 5 5 4 4 1`;
+Solo: 5 5 4 4 1
+TA: 5 5 4 4 1`;
 
         this.chartInput.value = demoChart;
         this.twoColumnToggle.checked = true;
@@ -223,38 +226,37 @@ TA 5 5 4 4 1`;
                 continue;
             }
 
-            // Check if line starts with a section label (with or without colon)
-            // Try with colon first: V:, C:, B:, TA:, etc.
-            let sectionMatch = trimmed.match(/^([A-Z]+):?\s*(.*)$/i);
+            // Check if line starts with a section label followed by colon
+            // Format: up to 4 characters followed by colon (V:, C:, TA:, V1:, C2:, etc.)
+            let sectionMatch = trimmed.match(/^([A-Za-z0-9]{1,4}):+\s*(.*)$/);
             let isSection = false;
 
             if (sectionMatch) {
                 const [, label, content] = sectionMatch;
-                // Check if this label is a known section type
-                const sectionName = this.expandSectionLabel(label);
+                // Process the label according to the rules
+                const processedLabel = this.processSectionLabel(label);
+                const sectionName = this.expandSectionLabel(processedLabel.abbr);
 
-                // Only treat as section if it's a known section label
-                if (this.isKnownSection(label)) {
-                    isSection = true;
+                // Always treat as section if it matches the pattern
+                isSection = true;
 
-                    // If there's content after the label, add it as bars
-                    if (content.trim()) {
-                        if (!currentSection || currentSection.name.abbr !== sectionName.abbr) {
-                            currentSection = { name: sectionName, bars: [] };
-                            sections.push(currentSection);
-                        }
-                        const bars = this.parseBars(content);
-                        // Apply pending start repeat to first bar
-                        if (pendingStartRepeat && bars.length > 0) {
-                            bars[0].startRepeat = true;
-                            pendingStartRepeat = false;
-                        }
-                        currentSection.bars.push(...bars);
-                    } else {
-                        // Just a section label, start new section
+                // If there's content after the label, add it as bars
+                if (content.trim()) {
+                    if (!currentSection || currentSection.name.abbr !== sectionName.abbr) {
                         currentSection = { name: sectionName, bars: [] };
                         sections.push(currentSection);
                     }
+                    const bars = this.parseBars(content);
+                    // Apply pending start repeat to first bar
+                    if (pendingStartRepeat && bars.length > 0) {
+                        bars[0].startRepeat = true;
+                        pendingStartRepeat = false;
+                    }
+                    currentSection.bars.push(...bars);
+                } else {
+                    // Just a section label, start new section
+                    currentSection = { name: sectionName, bars: [] };
+                    sections.push(currentSection);
                 }
             }
 
@@ -286,9 +288,31 @@ TA 5 5 4 4 1`;
         return sections;
     }
 
+    processSectionLabel(label) {
+        // Determine how to render the section label
+        // Rules: If mixed case, render mixed case. If upper/lower only, render upper case.
+
+        const hasUpper = /[A-Z]/.test(label);
+        const hasLower = /[a-z]/.test(label);
+
+        let displayLabel = label;
+        if (hasUpper && hasLower) {
+            // Mixed case - keep as is
+            displayLabel = label;
+        } else {
+            // All upper or all lower - render as upper case
+            displayLabel = label.toUpperCase();
+        }
+
+        return {
+            abbr: displayLabel,
+            original: label
+        };
+    }
+
     isKnownSection(label) {
-        const knownSections = ['V', 'C', 'B', 'I', 'O', 'TA', 'PC', 'S', 'T', 'INT'];
-        return knownSections.includes(label.toUpperCase());
+        // This is now less restrictive since we accept any 1-4 character label followed by colon
+        return true;
     }
 
     expandSectionLabel(label) {
@@ -304,13 +328,22 @@ TA 5 5 4 4 1`;
             'T': { abbr: 'T', full: 'Tag' },
             'INT': { abbr: 'INT', full: 'Interlude' }
         };
+
+        // Handle numbered sections (V1, C2, etc.)
+        if (/^[A-Z]+\d+$/.test(label.toUpperCase())) {
+            const baseLetter = label.charAt(0).toUpperCase();
+            const number = label.substring(1);
+            const baseName = labels[baseLetter]?.full || baseLetter;
+            return { abbr: label.toUpperCase(), full: `${baseName} ${number}` };
+        }
+
         const upperLabel = label.toUpperCase();
         return labels[upperLabel] || { abbr: label, full: label };
     }
 
     parseChordNotation(chordStr) {
         // Parse a chord string to extract components
-        // Returns: { base, seventh, suspended, diminished, inversion, push, staccato }
+        // Returns: { base, seventh, suspended, diminished, inversion, push, staccato, ticks }
 
         let remaining = chordStr;
         let seventh = false;
@@ -319,6 +352,14 @@ TA 5 5 4 4 1`;
         let inversion = null; // bass note for slash chords
         let push = null; // 'early' (<) or 'late' (>)
         let staccato = false; // ^ for staccato accent
+        let ticks = 0; // number of tick marks (') for beat count
+
+        // Check for tick marks at the end (e.g., 1', 4'', 5''')
+        const tickMatch = remaining.match(/'+$/);
+        if (tickMatch) {
+            ticks = tickMatch[0].length;
+            remaining = remaining.slice(0, -ticks);
+        }
 
         // Check for staccato accent at the end (^)
         if (remaining.endsWith('^')) {
@@ -378,7 +419,8 @@ TA 5 5 4 4 1`;
             diminished,
             inversion,
             push,
-            staccato
+            staccato,
+            ticks
         };
     }
 
@@ -506,9 +548,16 @@ TA 5 5 4 4 1`;
             chordHtml += `<sup class="chord-suspended">${this.escapeHtml(notation.suspended)}</sup>`;
         }
 
-        // Wrap with staccato and/or push notation if present
-        if (notation.staccato || (wrapWithPush && notation.push)) {
+        // Wrap with ticks, staccato and/or push notation if present
+        if (notation.ticks || notation.staccato || (wrapWithPush && notation.push)) {
             let result = chordHtml;
+            
+            // Add tick marks above chord
+            if (notation.ticks) {
+                const ticksStr = "'".repeat(notation.ticks);
+                const ticksHtml = `<span class="tick-marks">${ticksStr}</span>`;
+                result = `<span class="chord-with-ticks">${ticksHtml}${result}</span>`;
+            }
             
             // Add staccato symbol above chord
             if (notation.staccato) {
@@ -562,10 +611,17 @@ TA 5 5 4 4 1`;
             chordHtml += `<sup class="chord-suspended">${this.escapeHtml(notation.suspended)}</sup>`;
         }
 
-        // For tied chords, wrap with staccato and/or push notation using inline display
+        // For tied chords, wrap with ticks, staccato and/or push notation using inline display
         // This preserves the underline across all tied chords
-        if (notation.staccato || notation.push) {
+        if (notation.ticks || notation.staccato || notation.push) {
             let result = chordHtml;
+            
+            // Add tick marks above chord
+            if (notation.ticks) {
+                const ticksStr = "'".repeat(notation.ticks);
+                const ticksHtml = `<span class="tick-marks">${ticksStr}</span>`;
+                result = `<span class="tied-chord-ticks">${ticksHtml}${result}</span>`;
+            }
             
             // Add staccato symbol above chord
             if (notation.staccato) {
@@ -578,8 +634,8 @@ TA 5 5 4 4 1`;
                 const pushSymbol = notation.push === 'early' ? '&lt;' : '&gt;';
                 const pushClass = notation.push === 'early' ? 'push-early' : 'push-late';
                 result = `<span class="tied-chord-part"><span class="push-symbol ${pushClass}">${pushSymbol}</span>${result}</span>`;
-            } else if (notation.staccato) {
-                // If only staccato (no push), still need the tied-chord-part wrapper for proper inline display
+            } else if (notation.ticks || notation.staccato) {
+                // If only ticks or staccato (no push), still need the tied-chord-part wrapper for proper inline display
                 result = `<span class="tied-chord-part">${result}</span>`;
             }
             
@@ -642,19 +698,19 @@ TA 5 5 4 4 1`;
             html += '<div class="chart-title"></div>';
         }
 
-        // Right info (tempo and key)
+        // Right info (key, tempo and time)
         html += '<div class="header-right">';
         const headerParts = [];
-        if (metadata.tempo) {
-            headerParts.push(`<span class="tempo-display">bpm: ${this.escapeHtml(metadata.tempo)}</span>`);
-        }
         if (metadata.key) {
-            headerParts.push(`<span class="key-display">key: ${this.escapeHtml(metadata.key)}</span>`);
+            headerParts.push(`<span class="key-display">${this.escapeHtml(metadata.key)}</span>`);
+        }
+        if (metadata.tempo) {
+            headerParts.push(`<span class="tempo-display">${this.escapeHtml(metadata.tempo)} bpm</span>`);
         }
         if (metadata.time) {
-            headerParts.push(`<span class="time-display">time: ${this.renderTimeSig(metadata.time)}</span>`);
+            headerParts.push(`<span class="time-display">${this.renderTimeSig(metadata.time)}</span>`);
         }
-        html += headerParts.join('<span class="separator">   </span>');
+        html += headerParts.join('<span class="separator"> • </span>');
         html += '</div>';
 
         html += '</div>';

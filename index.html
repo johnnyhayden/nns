@@ -11,33 +11,27 @@
 </head>
 <body>
     <div class="app-container no-print">
-        <header>
-            <h1>Nashville Number System Chart Maker</h1>
-        </header>
-
         <div class="main-content">
             <!-- Left Panel: Input -->
             <div class="input-panel">
-                <h2>Chart Input</h2>
+                <h2>Nashville Number System Chart Maker</h2>
 
                 <!-- Metadata -->
                 <div class="metadata-section">
                     <div class="metadata-row">
-                        <div class="metadata-field">
+                        <div class="metadata-field title-field">
                             <label for="song-title">Title:</label>
                             <input type="text" id="song-title" placeholder="Song Title">
                         </div>
-                        <div class="metadata-field">
+                        <div class="metadata-field narrow-field">
                             <label for="song-key">Key:</label>
                             <input type="text" id="song-key" placeholder="C">
                         </div>
-                    </div>
-                    <div class="metadata-row">
-                        <div class="metadata-field">
+                        <div class="metadata-field narrow-field">
                             <label for="song-tempo">Tempo:</label>
                             <input type="text" id="song-tempo" placeholder="120">
                         </div>
-                        <div class="metadata-field">
+                        <div class="metadata-field narrow-field">
                             <label for="song-time">Time:</label>
                             <input type="text" id="song-time" placeholder="4/4">
                         </div>
@@ -60,11 +54,18 @@
                     <textarea id="chart-input" placeholder="V 1 4 5 1 1 4 5 1 1 4 5 1&#10;C 1 5 6- 4 1 5 6- 4"></textarea>
                 </div>
 
+                <!-- Saved Charts -->
+                <div class="saved-charts-section">
+                    <h3>Saved Charts</h3>
+                    <div id="saved-charts-list"></div>
+                </div>
+
                 <!-- Help Text -->
                 <div class="help-text">
                     <strong>Format:</strong>
                     <ul>
-                        <li>Section labels: V (Verse), C (Chorus), B (Bridge), I (Intro), TA (Turn Around) - colon optional</li>
+                        <li>Section labels: V:, C:, B:, I:, TA:, Solo: - colon required (up to 4 chars)</li>
+                        <li>Numbered sections: V1:, C2:, V2:, etc. - renders in boxes</li>
                         <li>Type any number of chords - auto-wraps into 4-beat bars (e.g., 12 chords = 3 lines)</li>
                         <li>Auto-spaces when typing numbers (type "1451" → get "1 4 5 1")</li>
                         <li>Use / for rhythm hits: 1 / / /</li>
@@ -80,23 +81,17 @@
                         <li>Push late: 5&gt; (shows &gt; above chord)</li>
                         <li>Push diamonds: &lt;&lt;5&gt; (early), &lt;5&gt;&gt; (late)</li>
                         <li>Staccato accent: 5^ (shows ^ above chord)</li>
+                        <li>Beat ticks: 1'_4''' (1 beat on 1, 3 beats on 4 - ticks shown above)</li>
                     </ul>
                     <p style="margin-top: 15px; text-align: center;">
                         <a href="#" id="load-demo-link" style="color: #007bff; font-weight: bold; text-decoration: none;">Load Demo Chart</a>
                     </p>
-                </div>
-
-                <!-- Saved Charts -->
-                <div class="saved-charts-section">
-                    <h3>Saved Charts</h3>
-                    <div id="saved-charts-list"></div>
                 </div>
             </div>
 
             <!-- Right Panel: Preview -->
             <div class="preview-panel">
                 <div class="preview-controls">
-                    <h2>Preview</h2>
                     <div class="button-group">
                         <button id="save-chart-btn" class="btn btn-primary">Save Chart</button>
                         <button id="new-chart-btn" class="btn">New Chart</button>

@@ -6,11 +6,12 @@
 }
 
 body {
-    font-family: 'Courier New', monospace;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     font-size: 16px;
     line-height: 1.6;
     color: #333;
-    background-color: #f5f5f5;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
 }
 
 /* Font classes */
@@ -170,13 +171,14 @@ header {
     text-align: center;
     margin-bottom: 30px;
     padding-bottom: 20px;
-    border-bottom: 2px solid #333;
 }
 
 header h1 {
-    font-family: Arial, sans-serif;
-    font-size: 28px;
+    font-family: 'Kalam', cursive;
+    font-size: 37px;
     font-weight: bold;
+    color: #1a202c;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
 
 /* Main Content Layout */
@@ -188,16 +190,22 @@ header h1 {
 
 /* Input Panel */
 .input-panel {
-    background: white;
+    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%);
+    backdrop-filter: blur(10px);
     padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
 }
 
 .input-panel h2 {
-    font-family: Arial, sans-serif;
-    font-size: 20px;
+    font-family: 'Kalam', cursive;
+    font-size: 28px;
+    font-weight: bold;
+    color: #1a202c;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     margin-bottom: 20px;
+    text-align: center;
 }
 
 /* Metadata Section */
@@ -207,9 +215,16 @@ header h1 {
 
 .metadata-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
     gap: 10px;
     margin-bottom: 10px;
+}
+
+.metadata-row:first-child {
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+}
+
+.metadata-row:nth-child(2) {
+    grid-template-columns: 1fr 1fr;
 }
 
 .metadata-field {
@@ -224,11 +239,19 @@ header h1 {
 }
 
 .metadata-field input {
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-family: 'Courier New', monospace;
-    font-size: 14px;
+    padding: 10px 12px;
+    border: 2px solid rgba(0,0,0,0.1);
+    border-radius: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    font-size: 13px;
+    background: rgba(255,255,255,0.8);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.metadata-field input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 /* Chart Input */
@@ -245,24 +268,33 @@ header h1 {
 
 #chart-input {
     width: 100%;
-    min-height: 300px;
+    min-height: 450px;
     padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    border: 2px solid rgba(0,0,0,0.1);
+    border-radius: 8px;
     font-family: 'Courier New', monospace;
     font-size: 16px;
     line-height: 1.8;
     resize: vertical;
+    background: rgba(255,255,255,0.8);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#chart-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 /* Help Text */
 .help-text {
-    background: #f9f9f9;
-    padding: 15px;
-    border-radius: 4px;
-    border-left: 4px solid #007bff;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(102, 126, 234, 0.1);
     font-size: 13px;
     margin-bottom: 20px;
+    backdrop-filter: blur(5px);
 }
 
 .help-text ul {
@@ -296,15 +328,19 @@ header h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 12px;
-    background: #f0f0f0;
-    border-radius: 4px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(248,250,252,0.8) 100%);
+    border-radius: 8px;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(0,0,0,0.05);
+    backdrop-filter: blur(5px);
 }
 
 .saved-chart-item:hover {
-    background: #e0e0e0;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .saved-chart-info {
@@ -321,25 +357,32 @@ header h1 {
 }
 
 .delete-chart-btn {
-    background: #dc3545;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
     color: white;
     border: none;
-    padding: 4px 8px;
-    border-radius: 3px;
+    padding: 6px 12px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 12px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
 }
 
 .delete-chart-btn:hover {
-    background: #c82333;
+    background: linear-gradient(135deg, #c82333 0%, #a02622 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
 }
 
 /* Preview Panel */
 .preview-panel {
-    background: #e0e0e0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%);
+    backdrop-filter: blur(10px);
     padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -349,16 +392,21 @@ header h1 {
 .preview-controls {
     margin-bottom: 20px;
     width: 100%;
-    background: white;
-    padding: 15px;
-    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(248,250,252,0.9) 100%);
+    backdrop-filter: blur(10px);
+    padding: 20px;
+    border-radius: 12px;
     box-sizing: border-box;
+    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
 .preview-controls h2 {
-    font-family: Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     font-size: 20px;
     margin-bottom: 15px;
+    font-weight: 600;
+    color: #4a5568;
 }
 
 .button-group {
@@ -370,27 +418,36 @@ header h1 {
 
 /* Buttons */
 .btn {
-    padding: 10px 20px;
+    padding: 12px 24px;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
-    font-weight: bold;
-    transition: background 0.2s;
-    background: #6c757d;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
 .btn:hover {
-    opacity: 0.9;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn:active {
+    transform: translateY(0);
 }
 
 .btn-primary {
-    background: #007bff;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
 }
 
 .btn-success {
-    background: #28a745;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
 }
 
 .column-toggle {
@@ -413,11 +470,20 @@ header h1 {
 }
 
 .font-select-label select {
-    padding: 5px 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
+    padding: 8px 12px;
+    border: 2px solid rgba(0,0,0,0.1);
+    border-radius: 8px;
     font-size: 14px;
     cursor: pointer;
+    background: rgba(255,255,255,0.8);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.font-select-label select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 /* Chart Preview - 8.5" x 11" paper simulation */
@@ -426,10 +492,10 @@ header h1 {
     font-size: 16px;
     line-height: 1.8;
     padding: 0.5in;
-    background: white;
-    border: 1px solid #ccc;
-    border-radius: 2px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+    border: 2px solid rgba(102, 126, 234, 0.2);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.5) inset;
     /* 8.5" x 11" at 96 DPI = 816px x 1056px, minus padding */
     width: 8.5in;
     min-height: 11in;
@@ -571,6 +637,7 @@ header h1 {
 .tied-chord-part {
     position: relative;
     display: inline;
+    margin-right: 2px;
 }
 
 .tied-chord-part .push-symbol {
@@ -637,6 +704,40 @@ header h1 {
     font-size: 1.1em;
     font-weight: bold;
     line-height: 1;
+}
+
+/* Beat tick marks - ' above chord to indicate beat count */
+.chord-with-ticks {
+    position: relative;
+    display: inline-block;
+}
+
+.tick-marks {
+    position: absolute;
+    top: -0.45em;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.9em;
+    font-weight: bold;
+    line-height: 1;
+    letter-spacing: -0.1em;
+}
+
+/* Tick marks in tied chords - keeps underline intact */
+.tied-chord-ticks {
+    position: relative;
+    display: inline;
+}
+
+.tied-chord-ticks .tick-marks {
+    position: absolute;
+    top: -0.45em;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.9em;
+    font-weight: bold;
+    line-height: 1;
+    letter-spacing: -0.1em;
 }
 
 /* Chord variations */
