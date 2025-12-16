@@ -440,6 +440,11 @@ header h1 {
     transform: translateY(0);
 }
 
+.btn-active {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+}
+
 .btn-primary {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
@@ -618,6 +623,17 @@ header h1 {
     grid-template-columns: repeat(4, auto);
     gap: 5px 15px;
     align-items: center;
+}
+
+.repeat-start-marker,
+.repeat-end-marker {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+    margin: 8px 0;
+    padding: 4px 0;
 }
 
 .beat {

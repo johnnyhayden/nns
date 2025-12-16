@@ -4,6 +4,7 @@ class NNSChartApp {
     constructor() {
         this.currentChartId = null;
         this.charts = this.loadChartsFromStorage();
+        this.optimizationEnabled = false;
         this.initializeElements();
         this.attachEventListeners();
         this.renderSavedCharts();
@@ -285,6 +286,11 @@ TA: 5 5 4 4 1`;
                     currentSection.bars.push(...bars);
                 }
             }
+        }
+
+        // Apply optimization if enabled
+        if (this.optimizationEnabled) {
+            return this.optimizeSections(sections);
         }
 
         return sections;
@@ -740,8 +746,10 @@ TA: 5 5 4 4 1`;
             html += '<div class="chart-bars">';
             for (const bar of section.bars) {
                 if (bar.type === 'repeat') {
-                    // Legacy repeat marker - shouldn't happen with new parsing
-                    html += `<div class="repeat-marker">${this.escapeHtml(bar.marker)}</div>`;
+                    // Render repeat markers
+                    const markerClass = bar.marker === 'start' ? 'repeat-start-marker' : 'repeat-end-marker';
+                    const markerSymbol = bar.marker === 'start' ? '||:' : ':||';
+                    html += `<div class="${markerClass}">${this.escapeHtml(markerSymbol)}</div>`;
                 } else {
                     // Each beat becomes a grid cell
                     for (let beatIndex = 0; beatIndex < bar.beats.length; beatIndex++) {
@@ -1046,60 +1054,88 @@ TA: 5 5 4 4 1`;
     }
 
     optimizeChart() {
-        const chartText = this.chartInput.value;
-        const optimizedText = this.optimizeChartText(chartText);
+        // Toggle optimization mode
+        this.optimizationEnabled = !this.optimizationEnabled;
+        this.updatePreview();
 
-        if (optimizedText !== chartText) {
-            this.chartInput.value = optimizedText;
-            this.updatePreview();
-            alert('Chart optimized! Repeat symbols have been added where possible.');
+        const button = this.optimizeBtn;
+        if (this.optimizationEnabled) {
+            button.textContent = 'Optimize ✓';
+            button.classList.add('btn-active');
         } else {
-            alert('No optimization opportunities found in the current chart.');
+            button.textContent = 'Optimize';
+            button.classList.remove('btn-active');
         }
     }
 
-    optimizeChartText(chartText) {
-        const lines = chartText.split('\n');
-        const optimizedLines = [];
+    optimizeSections(sections) {
+        const optimizedSections = [];
         let i = 0;
 
-        while (i < lines.length) {
-            const currentLine = lines[i].trim();
+        while (i < sections.length) {
+            const currentSection = sections[i];
 
-            // Skip empty lines and comments
-            if (!currentLine || currentLine.startsWith('#')) {
-                optimizedLines.push(lines[i]);
-                i++;
-                continue;
-            }
-
-            // Check for repeat opportunities (2+ identical lines)
+            // Check for repeat opportunities (2+ identical sections)
             let repeatCount = 1;
             let j = i + 1;
 
-            // Count consecutive identical lines
-            while (j < lines.length && lines[j].trim() === currentLine) {
+            // Count consecutive identical sections
+            while (j < sections.length && this.sectionsAreEqual(sections[j], currentSection)) {
                 repeatCount++;
                 j++;
             }
 
             if (repeatCount >= 2) {
-                // Add start repeat marker
-                optimizedLines.push('||:');
-                // Add the repeated line once
-                optimizedLines.push(currentLine);
-                // Add end repeat marker
-                optimizedLines.push(':||');
-                // Skip the repeated lines we just processed
+                // Create a section with repeat markers
+                const repeatSection = {
+                    name: currentSection.name,
+                    bars: [
+                        { type: 'repeat', marker: 'start', beats: [] },
+                        ...currentSection.bars,
+                        { type: 'repeat', marker: 'end', beats: [] }
+                    ]
+                };
+                optimizedSections.push(repeatSection);
+                // Skip the repeated sections we just processed
                 i += repeatCount;
             } else {
-                // No repeats found, add the line as-is
-                optimizedLines.push(lines[i]);
+                // No repeats found, add the section as-is
+                optimizedSections.push(currentSection);
                 i++;
             }
         }
 
-        return optimizedLines.join('\n');
+        return optimizedSections;
+    }
+
+    sectionsAreEqual(section1, section2) {
+        // Compare section names
+        if (section1.name?.abbr !== section2.name?.abbr) {
+            return false;
+        }
+
+        // Compare bar count
+        if (section1.bars.length !== section2.bars.length) {
+            return false;
+        }
+
+        // Compare each bar's beats
+        for (let i = 0; i < section1.bars.length; i++) {
+            const bar1 = section1.bars[i];
+            const bar2 = section2.bars[i];
+
+            if (bar1.type !== bar2.type || bar1.beats.length !== bar2.beats.length) {
+                return false;
+            }
+
+            for (let j = 0; j < bar1.beats.length; j++) {
+                if (bar1.beats[j].value !== bar2.beats[j].value) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     printChart() {
