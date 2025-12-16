@@ -422,30 +422,30 @@ header h1 {
     line-height: 0;
 }
 
+/* Diagonal fraction style for chord inversions (shilling/solidus fraction) */
 .chord-inversion {
     display: inline-flex;
-    flex-direction: column;
-    align-items: center;
-    line-height: 1;
-    vertical-align: middle;
+    align-items: baseline;
     position: relative;
+    vertical-align: baseline;
 }
 
 .inversion-top {
-    font-size: 14px;
-    line-height: 1;
+    font-size: 0.85em;
+    position: relative;
+    top: -0.3em;
 }
 
 .inversion-slash {
-    font-size: 16px;
-    line-height: 0.5;
-    margin: -2px 0;
-    transform: rotate(15deg);
+    font-size: 1.1em;
+    margin: 0 1px;
+    position: relative;
 }
 
 .inversion-bottom {
-    font-size: 14px;
-    line-height: 1;
+    font-size: 0.85em;
+    position: relative;
+    top: 0.2em;
 }
 
 .bar-comment {
@@ -471,26 +471,85 @@ header h1 {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 34px;
-    height: 34px;
+    width: 22px;
+    height: 28px;
     background: white;
     border: 2px solid #333;
     transform: rotate(45deg);
-    border-radius: 3px;
+    border-radius: 2px;
 }
 
 .diamond-text {
     transform: rotate(-45deg);
     font-weight: bold;
-    font-size: 18px;
+    font-size: 16px;
     display: block;
 }
 
-.repeat-marker {
-    font-weight: bold;
-    color: #007bff;
-    margin: 5px 0;
-    grid-column: 1 / -1;
+/* Repeat symbols - authentic music notation style */
+/* Position repeat symbols absolutely so they don't affect chord position */
+.beat-with-repeat {
+    position: relative;
+}
+
+.repeat-start,
+.repeat-end {
+    position: absolute;
+    display: inline-flex;
+    align-items: center;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Position close to the chord text, accounting for beat's min-width centering */
+.repeat-start {
+    right: calc(50% + 8px);
+}
+
+.repeat-end {
+    left: calc(50% + 8px);
+}
+
+/* The repeat symbol structure: dots + thick/thin bars */
+.repeat-symbol {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.repeat-dots {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+}
+
+.repeat-dot {
+    width: 5px;
+    height: 5px;
+    min-width: 5px;
+    min-height: 5px;
+    background-color: #333;
+    border-radius: 50%;
+}
+
+.repeat-bars {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.repeat-bar-thin {
+    width: 2px;
+    height: 20px;
+    background-color: #333;
+}
+
+.repeat-bar-thick {
+    width: 4px;
+    height: 20px;
+    background-color: #333;
 }
 
 /* Chart Footer */

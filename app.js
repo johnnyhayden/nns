@@ -173,6 +173,7 @@ TA 5 5 4 4 1`;
         const lines = chartText.split('\n').filter(line => line.trim());
         const sections = [];
         let currentSection = null;
+        let pendingStartRepeat = false;
 
         for (const line of lines) {
             const trimmed = line.trim();
@@ -185,6 +186,22 @@ TA 5 5 4 4 1`;
                 if (currentSection && currentSection.bars.length > 0) {
                     const lastBar = currentSection.bars[currentSection.bars.length - 1];
                     lastBar.comment = comment;
+                }
+                continue;
+            }
+
+            // Check if this is a start repeat marker
+            if (trimmed === '||:') {
+                pendingStartRepeat = true;
+                continue;
+            }
+
+            // Check if this is an end repeat marker
+            if (trimmed === ':||') {
+                // Attach to the last bar in current section
+                if (currentSection && currentSection.bars.length > 0) {
+                    const lastBar = currentSection.bars[currentSection.bars.length - 1];
+                    lastBar.endRepeat = true;
                 }
                 continue;
             }
@@ -210,6 +227,11 @@ TA 5 5 4 4 1`;
                             sections.push(currentSection);
                         }
                         const bars = this.parseBars(content);
+                        // Apply pending start repeat to first bar
+                        if (pendingStartRepeat && bars.length > 0) {
+                            bars[0].startRepeat = true;
+                            pendingStartRepeat = false;
+                        }
                         currentSection.bars.push(...bars);
                     } else {
                         // Just a section label, start new section
@@ -223,12 +245,22 @@ TA 5 5 4 4 1`;
                 if (currentSection) {
                     // Regular bar line under current section
                     const bars = this.parseBars(trimmed);
+                    // Apply pending start repeat to first bar
+                    if (pendingStartRepeat && bars.length > 0) {
+                        bars[0].startRepeat = true;
+                        pendingStartRepeat = false;
+                    }
                     currentSection.bars.push(...bars);
                 } else {
                     // No section defined yet, create a default one
                     currentSection = { name: '', bars: [] };
                     sections.push(currentSection);
                     const bars = this.parseBars(trimmed);
+                    // Apply pending start repeat to first bar
+                    if (pendingStartRepeat && bars.length > 0) {
+                        bars[0].startRepeat = true;
+                        pendingStartRepeat = false;
+                    }
                     currentSection.bars.push(...bars);
                 }
             }
@@ -299,12 +331,6 @@ TA 5 5 4 4 1`;
     }
 
     parseBars(barText) {
-        // Check for repeat markers
-        const repeatMatch = barText.match(/^(:\|\||:\||\|\|:|x\d+)$/);
-        if (repeatMatch) {
-            return [{ type: 'repeat', marker: repeatMatch[1] }];
-        }
-
         // Parse all beats from the text
         const parts = barText.split(/\s+/).filter(p => p);
         if (parts.length === 0) return [];
@@ -393,6 +419,32 @@ TA 5 5 4 4 1`;
         return html;
     }
 
+    renderRepeatSymbol(type) {
+        // Render authentic music notation repeat symbols
+        // Start repeat: thick bar, thin bar, dots (reading left to right)
+        // End repeat: dots, thin bar, thick bar (reading left to right)
+        
+        const dotsHtml = `<span class="repeat-dots"><span class="repeat-dot"></span><span class="repeat-dot"></span></span>`;
+        
+        if (type === 'start') {
+            return `<span class="repeat-start repeat-symbol">
+                <span class="repeat-bars">
+                    <span class="repeat-bar-thick"></span>
+                    <span class="repeat-bar-thin"></span>
+                </span>
+                ${dotsHtml}
+            </span>`;
+        } else {
+            return `<span class="repeat-end repeat-symbol">
+                ${dotsHtml}
+                <span class="repeat-bars">
+                    <span class="repeat-bar-thin"></span>
+                    <span class="repeat-bar-thick"></span>
+                </span>
+            </span>`;
+        }
+    }
+
     renderChart(sections, metadata, twoColumn = false) {
         let html = '';
 
@@ -447,28 +499,55 @@ TA 5 5 4 4 1`;
             html += '<div class="chart-bars">';
             for (const bar of section.bars) {
                 if (bar.type === 'repeat') {
+                    // Legacy repeat marker - shouldn't happen with new parsing
                     html += `<div class="repeat-marker">${this.escapeHtml(bar.marker)}</div>`;
                 } else {
                     // Each beat becomes a grid cell
-                    for (const beat of bar.beats) {
+                    for (let beatIndex = 0; beatIndex < bar.beats.length; beatIndex++) {
+                        const beat = bar.beats[beatIndex];
+                        const isFirstBeat = beatIndex === 0;
+                        const isLastBeat = beatIndex === bar.beats.length - 1;
+                        
                         // Beat is now an object with value, held, tied, and notation properties
                         const displayBeat = beat.value || '';
 
+                        // Build the chord content
+                        let chordHtml = '';
                         if (beat.held && beat.value) {
                             // Held chord in diamond
                             const chordContent = beat.notation ? this.renderChordWithNotation(beat.notation) : this.escapeHtml(displayBeat);
-                            html += `<span class="beat held-chord"><span class="diamond"><span class="diamond-text">${chordContent}</span></span></span>`;
+                            chordHtml = `<span class="diamond"><span class="diamond-text">${chordContent}</span></span>`;
                         } else if (beat.tied && beat.value) {
                             // Tied chords are underlined and grouped tightly
                             const tiedParts = beat.value.split('_').map(p => this.escapeHtml(p)).join('');
-                            html += `<span class="beat tied-chord">${tiedParts}</span>`;
+                            chordHtml = tiedParts;
                         } else if (displayBeat) {
                             // Regular chord with potential notation
-                            const chordContent = beat.notation ? this.renderChordWithNotation(beat.notation) : this.escapeHtml(displayBeat);
-                            html += `<span class="beat">${chordContent}</span>`;
+                            chordHtml = beat.notation ? this.renderChordWithNotation(beat.notation) : this.escapeHtml(displayBeat);
+                        }
+
+                        // Determine beat classes
+                        let beatClasses = 'beat';
+                        if (beat.held && beat.value) beatClasses += ' held-chord';
+                        if (beat.tied && beat.value) beatClasses += ' tied-chord';
+
+                        // Add start repeat symbol before first beat if needed
+                        let startRepeatHtml = '';
+                        if (isFirstBeat && bar.startRepeat) {
+                            startRepeatHtml = this.renderRepeatSymbol('start');
+                        }
+
+                        // Add end repeat symbol after last beat if needed
+                        let endRepeatHtml = '';
+                        if (isLastBeat && bar.endRepeat) {
+                            endRepeatHtml = this.renderRepeatSymbol('end');
+                        }
+
+                        // Wrap beat with repeat symbols if needed
+                        if (startRepeatHtml || endRepeatHtml) {
+                            html += `<span class="${beatClasses} beat-with-repeat">${startRepeatHtml}${chordHtml}${endRepeatHtml}</span>`;
                         } else {
-                            // Empty beat
-                            html += `<span class="beat"></span>`;
+                            html += `<span class="${beatClasses}">${chordHtml}</span>`;
                         }
                     }
 
