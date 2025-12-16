@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nashville Number System Chart Maker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container no-print">
+        <header>
+            <h1>Nashville Number System Chart Maker</h1>
+        </header>
+
+        <div class="main-content">
+            <!-- Left Panel: Input -->
+            <div class="input-panel">
+                <h2>Chart Input</h2>
+
+                <!-- Metadata -->
+                <div class="metadata-section">
+                    <div class="metadata-row">
+                        <div class="metadata-field">
+                            <label for="song-title">Title:</label>
+                            <input type="text" id="song-title" placeholder="Song Title">
+                        </div>
+                        <div class="metadata-field">
+                            <label for="song-key">Key:</label>
+                            <input type="text" id="song-key" placeholder="C">
+                        </div>
+                    </div>
+                    <div class="metadata-row">
+                        <div class="metadata-field">
+                            <label for="song-tempo">Tempo:</label>
+                            <input type="text" id="song-tempo" placeholder="120">
+                        </div>
+                        <div class="metadata-field">
+                            <label for="song-time">Time:</label>
+                            <input type="text" id="song-time" placeholder="4/4">
+                        </div>
+                    </div>
+                    <div class="metadata-row">
+                        <div class="metadata-field">
+                            <label for="song-songwriter">Songwriter:</label>
+                            <input type="text" id="song-songwriter" placeholder="Artist Name">
+                        </div>
+                        <div class="metadata-field">
+                            <label for="song-chartedby">Charted By:</label>
+                            <input type="text" id="song-chartedby" placeholder="John Hayden" value="John Hayden">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart Input -->
+                <div class="chart-input-section">
+                    <label for="chart-input">Chart (4 beats per bar):</label>
+                    <textarea id="chart-input" placeholder="V 1 4 5 1 1 4 5 1 1 4 5 1&#10;C 1 5 6- 4 1 5 6- 4"></textarea>
+                </div>
+
+                <!-- Help Text -->
+                <div class="help-text">
+                    <strong>Format:</strong>
+                    <ul>
+                        <li>Section labels: V (Verse), C (Chorus), B (Bridge), I (Intro), TA (Turn Around) - colon optional</li>
+                        <li>Type any number of chords - auto-wraps into 4-beat bars (e.g., 12 chords = 3 lines)</li>
+                        <li>Auto-spaces when typing numbers (type "1451" → get "1 4 5 1")</li>
+                        <li>Use / for rhythm hits: 1 / / /</li>
+                        <li>Held chords: &lt;2&gt; displays as diamond around number</li>
+                        <li>Tied chords: 1_4_5_1 displays underlined</li>
+                        <li>Comments: #Your comment here (appears below chords)</li>
+                        <li>Repeat markers: ||:, :||, x2, x3, etc.</li>
+                        <li>Chords: 1, 2-, 3, 4, 5, 6-, 7o (- for minor, o for diminished)</li>
+                        <li>Seventh chords: 17, 4-7, 57 (adds superscript 7)</li>
+                        <li>Suspended: 1s, 4sus, 2-sus (adds superscript s or sus)</li>
+                        <li>Inversions: 5/1, 4/2 (renders as stacked fraction)</li>
+                    </ul>
+                    <p style="margin-top: 15px; text-align: center;">
+                        <a href="#" id="load-demo-link" style="color: #007bff; font-weight: bold; text-decoration: none;">Load Demo Chart</a>
+                    </p>
+                </div>
+
+                <!-- Saved Charts -->
+                <div class="saved-charts-section">
+                    <h3>Saved Charts</h3>
+                    <div id="saved-charts-list"></div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Preview -->
+            <div class="preview-panel">
+                <div class="preview-controls">
+                    <h2>Preview</h2>
+                    <div class="button-group">
+                        <button id="save-chart-btn" class="btn btn-primary">Save Chart</button>
+                        <button id="new-chart-btn" class="btn">New Chart</button>
+                        <label class="column-toggle">
+                            <input type="checkbox" id="two-column-toggle" checked>
+                            2 Columns
+                        </label>
+                        <label class="font-select-label">
+                            Font:
+                            <select id="font-select">
+                                <option value="handwriting" selected>Handwriting</option>
+                                <option value="helvetica">Helvetica</option>
+                            </select>
+                        </label>
+                        <button id="print-btn" class="btn btn-success">Print</button>
+                    </div>
+                </div>
+                <div id="chart-preview" class="chart-preview"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print View -->
+    <div class="print-only" id="print-view"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
