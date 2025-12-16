@@ -79,44 +79,31 @@ class NNSChartApp {
 I: 1 5 6- 4
 
 v1: 1 4 5 1
-#Diamond on the one!
+#Diamond and tied chords
 <1> 4 5 1
-2- 5 1 1
-#Tied chords below
 1_4_5_1 2- 5 1
 
 C: 17 5 6- 4
-#Seventh chord above
-1 5 6- 4
 ||:
-C: 1 5 6- 4 1 5 6- 4
+1 5 6- 4
 :||
 
-B: 4sus 5 6- 1
-#Suspended and diminished
-4sus2 5sus4 7o 1
-2- 5/1 <1>
-#Inversion and diamond above
+v2: 1^ 4^ 5^ 1^
+#Staccato and push notation
+1 <4 5> 1
 
-V2: 1 <4 5 1
-#Early push on 4
-1 5>_4> 1 5>_4>
-#Late push tied chords
-<<5> 4 <5>> 1
-#Early and late push diamonds
+B: 4sus 5/1 7o 1
+#Suspended, inversion, diminished
 
-V: 1^ 4^ 5^ 1^
-#Staccato accents above
-17 4-7 5 1
-1'_4''' 1''_4'_5'
-#Beat ticks: 1 beat + 3 beats, then 2+1+1
+Solo: 5 5 4 4
+5 5 4 4
+3- 3- 2- 2-
+1 1 1 1
 
 C: 1 5 6- 4
-1 5^ 6-^ 4
-#Staccato on 5 and 6-
 
-Solo: 5 5 4 4 1
-TA: 5 5 4 4 1`;
+Tag: 1'_4''' 1''_4'_5' <1>
+#Beat tick marks, ending on diamond`;
 
         this.chartInput.value = demoChart;
         this.twoColumnToggle.checked = true;
@@ -780,9 +767,9 @@ TA: 5 5 4 4 1`;
                             // Tied chords are underlined and grouped tightly
                             // Each tied chord can have its own push notation displayed above it
                             if (beat.tiedNotations) {
-                                chordHtml = beat.tiedNotations.map(notation => this.renderTiedChordPart(notation)).join('');
+                                chordHtml = beat.tiedNotations.map(notation => this.renderTiedChordPart(notation)).join(' ');
                             } else {
-                                const tiedParts = beat.value.split('_').map(p => this.escapeHtml(p)).join('');
+                                const tiedParts = beat.value.split('_').map(p => this.escapeHtml(p)).join(' ');
                                 chordHtml = tiedParts;
                             }
                         } else if (displayBeat) {
@@ -932,15 +919,16 @@ TA: 5 5 4 4 1`;
         const existingIndex = this.charts.findIndex(c => c.id === chartData.id);
         if (existingIndex >= 0) {
             this.charts[existingIndex] = chartData;
+            alert(`Chart "${title}" updated successfully!`);
         } else {
             this.charts.push(chartData);
+            alert(`Chart "${title}" saved successfully!`);
         }
 
-        this.currentChartId = chartData.id;
+        // Reset currentChartId so next save creates a new chart
+        this.currentChartId = null;
         this.saveChartsToStorage();
         this.renderSavedCharts();
-
-        alert(`Chart "${title}" saved successfully!`);
     }
 
     newChart() {

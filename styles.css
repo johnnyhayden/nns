@@ -118,7 +118,7 @@ body {
 }
 
 .size-medium .section-box {
-    width: 29px;
+    min-width: 29px;
     height: 29px;
     font-size: 19.2px;
 }
@@ -146,7 +146,7 @@ body {
 }
 
 .size-large .section-box {
-    width: 31px;
+    min-width: 31px;
     height: 31px;
     font-size: 20.8px;
 }
@@ -608,16 +608,16 @@ header h1 {
     justify-content: center;
     border: 2px solid #333;
     border-radius: 4px;
-    width: 24px;
+    min-width: 24px;
     height: 24px;
-    padding: 0;
+    padding: 0 4px;
     padding-top: 2px;
     text-align: center;
     font-weight: bold;
     background: white;
     font-size: 16px;
-    aspect-ratio: 1 / 1;
     line-height: 1;
+    white-space: nowrap;
 }
 
 .chart-bars {
@@ -655,8 +655,8 @@ header h1 {
 
 /* Tied chord parts with push notation - keeps underline intact */
 .tied-chord-part {
+    position: relative;
     display: inline;
-    margin-right: 2px;
     text-decoration: inherit;
 }
 
@@ -714,6 +714,7 @@ header h1 {
 
 /* Staccato in tied chords - keeps underline intact */
 .tied-chord-staccato {
+    position: relative;
     display: inline;
     text-decoration: inherit;
 }
@@ -749,6 +750,7 @@ header h1 {
 
 /* Tick marks in tied chords - keeps underline intact */
 .tied-chord-ticks {
+    position: relative;
     display: inline;
     text-decoration: inherit;
 }
