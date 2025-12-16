@@ -6,7 +6,7 @@
     <title>Nashville Number System Chart Maker</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&family=Mansalva&family=Shadows+Into+Light&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -71,7 +71,7 @@
                         <li>Held chords: &lt;2&gt; displays as diamond around number</li>
                         <li>Tied chords: 1_4_5_1 displays underlined</li>
                         <li>Comments: #Your comment here (appears below chords)</li>
-                        <li>Repeat markers: ||:, :||, x2, x3, etc.</li>
+                        <li>Repeat markers: ||:, :||</li>
                         <li>Chords: 1, 2-, 3, 4, 5, 6-, 7o (- for minor, o for diminished)</li>
                         <li>Seventh chords: 17, 4-7, 57 (adds superscript 7)</li>
                         <li>Suspended: 1s, 4sus, 2-sus (adds superscript s or sus)</li>
@@ -98,13 +98,23 @@
                         <button id="new-chart-btn" class="btn">New Chart</button>
                         <label class="column-toggle">
                             <input type="checkbox" id="two-column-toggle" checked>
-                            2 Columns
+                            2 col
                         </label>
                         <label class="font-select-label">
                             Font:
                             <select id="font-select">
                                 <option value="handwriting" selected>Handwriting</option>
+                                <option value="shadows">Shadows Into Light</option>
+                                <option value="mansalva">Mansalva</option>
                                 <option value="helvetica">Helvetica</option>
+                            </select>
+                        </label>
+                        <label class="font-select-label">
+                            Size:
+                            <select id="font-size-select">
+                                <option value="small">Small</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="large">Large</option>
                             </select>
                         </label>
                         <button id="print-btn" class="btn btn-success">Print</button>

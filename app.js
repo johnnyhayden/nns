@@ -25,6 +25,7 @@ class NNSChartApp {
         this.printView = document.getElementById('print-view');
         this.twoColumnToggle = document.getElementById('two-column-toggle');
         this.fontSelect = document.getElementById('font-select');
+        this.fontSizeSelect = document.getElementById('font-size-select');
 
         // Buttons
         this.saveBtn = document.getElementById('save-chart-btn');
@@ -46,6 +47,7 @@ class NNSChartApp {
         this.chartInput.addEventListener('input', (e) => this.handleChartInput(e));
         this.twoColumnToggle.addEventListener('change', () => this.updatePreview());
         this.fontSelect.addEventListener('change', () => this.updatePreview());
+        this.fontSizeSelect.addEventListener('change', () => this.updatePreview());
 
         // Button events
         this.saveBtn.addEventListener('click', () => this.saveChart());
@@ -98,13 +100,13 @@ V 1 4 57 1
 
 C 1 5 6- 4
 1 5 6- 4
-x2
 
 TA 5 5 4 4 1`;
 
         this.chartInput.value = demoChart;
         this.twoColumnToggle.checked = true;
         this.fontSelect.value = 'handwriting';
+        this.fontSizeSelect.value = 'medium';
         this.updatePreview();
     }
 
@@ -293,11 +295,12 @@ TA 5 5 4 4 1`;
 
     parseChordNotation(chordStr) {
         // Parse a chord string to extract components
-        // Returns: { base, seventh, suspended, inversion }
+        // Returns: { base, seventh, suspended, diminished, inversion }
 
         let remaining = chordStr;
         let seventh = false;
         let suspended = null; // 's' or 'sus'
+        let diminished = false;
         let inversion = null; // bass note for slash chords
 
         // Check for inversion (slash chord like "5/1")
@@ -322,10 +325,17 @@ TA 5 5 4 4 1`;
             remaining = remaining.slice(0, -1);
         }
 
+        // Check for diminished (ends with 'o')
+        if (remaining.endsWith('o')) {
+            diminished = true;
+            remaining = remaining.slice(0, -1);
+        }
+
         return {
             base: remaining,
             seventh,
             suspended,
+            diminished,
             inversion
         };
     }
@@ -406,6 +416,11 @@ TA 5 5 4 4 1`;
             html += this.escapeHtml(notation.base);
         }
 
+        // Add diminished if present
+        if (notation.diminished) {
+            html += '<sup class="chord-diminished">o</sup>';
+        }
+
         // Add seventh if present
         if (notation.seventh) {
             html += '<sup class="chord-seventh">7</sup>';
@@ -417,6 +432,17 @@ TA 5 5 4 4 1`;
         }
 
         return html;
+    }
+
+    renderTimeSig(time) {
+        // Render time signature as diagonal fraction like chord inversions
+        if (!time) return '';
+        
+        if (time.includes('/')) {
+            const parts = time.split('/');
+            return `<span class="time-sig-fraction"><span class="time-top">${this.escapeHtml(parts[0])}</span><span class="time-slash">/</span><span class="time-bottom">${this.escapeHtml(parts[1])}</span></span>`;
+        }
+        return this.escapeHtml(time);
     }
 
     renderRepeatSymbol(type) {
@@ -463,15 +489,17 @@ TA 5 5 4 4 1`;
 
         // Right info (tempo and key)
         html += '<div class="header-right">';
+        const headerParts = [];
         if (metadata.tempo) {
-            html += `<div class="tempo-display">bpm: ${this.escapeHtml(metadata.tempo)}</div>`;
+            headerParts.push(`<span class="tempo-display">bpm: ${this.escapeHtml(metadata.tempo)}</span>`);
         }
         if (metadata.key) {
-            html += `<div class="key-display">/ ${this.escapeHtml(metadata.key)}</div>`;
+            headerParts.push(`<span class="key-display">key: ${this.escapeHtml(metadata.key)}</span>`);
         }
         if (metadata.time) {
-            html += `<div class="time-display">${this.escapeHtml(metadata.time)}</div>`;
+            headerParts.push(`<span class="time-display">time: ${this.renderTimeSig(metadata.time)}</span>`);
         }
+        html += headerParts.join('<span class="separator">   </span>');
         html += '</div>';
 
         html += '</div>';
@@ -565,10 +593,10 @@ TA 5 5 4 4 1`;
 
         html += '</div>';
 
-        // Render footer with songwriter and charted by
+        // Render footer with songwriter and charted by at bottom right
         html += '<div class="chart-footer">';
         if (metadata.songwriter) {
-            html += `<div class="songwriter-credit">${this.escapeHtml(metadata.songwriter)}</div>`;
+            html += `<div class="songwriter-credit">artist: ${this.escapeHtml(metadata.songwriter)}</div>`;
         }
         if (metadata.chartedBy) {
             html += `<div class="charted-by-credit">chart by: ${this.escapeHtml(metadata.chartedBy)}</div>`;
@@ -592,14 +620,15 @@ TA 5 5 4 4 1`;
         const sections = this.parseChart(chartText);
         const twoColumn = this.twoColumnToggle.checked;
         const selectedFont = this.fontSelect.value;
+        const selectedSize = this.fontSizeSelect.value;
 
         const html = this.renderChart(sections, metadata, twoColumn);
         this.chartPreview.innerHTML = html;
         this.printView.innerHTML = html;
 
-        // Apply font class
-        this.chartPreview.className = `chart-preview font-${selectedFont}`;
-        this.printView.className = `print-only font-${selectedFont}`;
+        // Apply font and size classes
+        this.chartPreview.className = `chart-preview font-${selectedFont} size-${selectedSize}`;
+        this.printView.className = `print-only font-${selectedFont} size-${selectedSize}`;
 
         // Auto-save to localStorage on any change
         this.autoSave();
@@ -615,7 +644,8 @@ TA 5 5 4 4 1`;
             chartedBy: this.chartedByInput.value,
             chart: this.chartInput.value,
             twoColumn: this.twoColumnToggle.checked,
-            font: this.fontSelect.value
+            font: this.fontSelect.value,
+            fontSize: this.fontSizeSelect.value
         };
         localStorage.setItem('nns_current_chart', JSON.stringify(currentData));
     }
@@ -634,6 +664,7 @@ TA 5 5 4 4 1`;
                 this.chartInput.value = data.chart || '';
                 this.twoColumnToggle.checked = data.twoColumn !== undefined ? data.twoColumn : true;
                 this.fontSelect.value = data.font || 'handwriting';
+                this.fontSizeSelect.value = data.fontSize || 'medium';
             } catch (e) {
                 console.error('Failed to load auto-save:', e);
             }
@@ -691,6 +722,7 @@ TA 5 5 4 4 1`;
         this.chartInput.value = '';
         this.twoColumnToggle.checked = true;
         this.fontSelect.value = 'handwriting';
+        this.fontSizeSelect.value = 'medium';
         this.updatePreview();
     }
 
