@@ -30,6 +30,7 @@ class NNSChartApp {
         // Buttons
         this.saveBtn = document.getElementById('save-chart-btn');
         this.newBtn = document.getElementById('new-chart-btn');
+        this.optimizeBtn = document.getElementById('optimize-btn');
         this.printBtn = document.getElementById('print-btn');
 
         // Saved charts list
@@ -52,6 +53,7 @@ class NNSChartApp {
         // Button events
         this.saveBtn.addEventListener('click', () => this.saveChart());
         this.newBtn.addEventListener('click', () => this.newChart());
+        this.optimizeBtn.addEventListener('click', () => this.optimizeChart());
         this.printBtn.addEventListener('click', () => this.printChart());
 
         // Demo link
@@ -1041,6 +1043,63 @@ TA: 5 5 4 4 1`;
 
     saveChartsToStorage() {
         localStorage.setItem('nns_saved_charts', JSON.stringify(this.charts));
+    }
+
+    optimizeChart() {
+        const chartText = this.chartInput.value;
+        const optimizedText = this.optimizeChartText(chartText);
+
+        if (optimizedText !== chartText) {
+            this.chartInput.value = optimizedText;
+            this.updatePreview();
+            alert('Chart optimized! Repeat symbols have been added where possible.');
+        } else {
+            alert('No optimization opportunities found in the current chart.');
+        }
+    }
+
+    optimizeChartText(chartText) {
+        const lines = chartText.split('\n');
+        const optimizedLines = [];
+        let i = 0;
+
+        while (i < lines.length) {
+            const currentLine = lines[i].trim();
+
+            // Skip empty lines and comments
+            if (!currentLine || currentLine.startsWith('#')) {
+                optimizedLines.push(lines[i]);
+                i++;
+                continue;
+            }
+
+            // Check for repeat opportunities (2+ identical lines)
+            let repeatCount = 1;
+            let j = i + 1;
+
+            // Count consecutive identical lines
+            while (j < lines.length && lines[j].trim() === currentLine) {
+                repeatCount++;
+                j++;
+            }
+
+            if (repeatCount >= 2) {
+                // Add start repeat marker
+                optimizedLines.push('||:');
+                // Add the repeated line once
+                optimizedLines.push(currentLine);
+                // Add end repeat marker
+                optimizedLines.push(':||');
+                // Skip the repeated lines we just processed
+                i += repeatCount;
+            } else {
+                // No repeats found, add the line as-is
+                optimizedLines.push(lines[i]);
+                i++;
+            }
+        }
+
+        return optimizedLines.join('\n');
     }
 
     printChart() {
