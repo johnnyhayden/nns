@@ -93,13 +93,22 @@ B 4sus 5 6- 1
 #Suspended and diminished
 4sus2 5sus4 7o 1
 2- 5/1 <1>
-#Inversion above
+#Inversion and diamond above
 
-V 1 4 57 1
+V 1 <4 5 1
+#Early push on 4
+1 5>_4> 1 5>_4>
+#Late push tied chords
+<<5> 4 <5>> 1
+#Early and late push diamonds
+
+V 1^ 4^ 5^ 1^
+#Staccato accents above
 17 4-7 5 1
 
 C 1 5 6- 4
-1 5 6- 4
+1 5^ 6-^ 4
+#Staccato on 5 and 6-
 
 TA 5 5 4 4 1`;
 
@@ -301,13 +310,32 @@ TA 5 5 4 4 1`;
 
     parseChordNotation(chordStr) {
         // Parse a chord string to extract components
-        // Returns: { base, seventh, suspended, diminished, inversion }
+        // Returns: { base, seventh, suspended, diminished, inversion, push, staccato }
 
         let remaining = chordStr;
         let seventh = false;
-        let suspended = null; // 's' or 'sus'
+        let suspended = null; // 's', 'sus', 'sus2', or 'sus4'
         let diminished = false;
         let inversion = null; // bass note for slash chords
+        let push = null; // 'early' (<) or 'late' (>)
+        let staccato = false; // ^ for staccato accent
+
+        // Check for staccato accent at the end (^)
+        if (remaining.endsWith('^')) {
+            staccato = true;
+            remaining = remaining.slice(0, -1);
+        }
+
+        // Check for push notation
+        // Early push: < at the START (e.g., <4)
+        // Late push: > at the END (e.g., 5>)
+        if (remaining.startsWith('<')) {
+            push = 'early';
+            remaining = remaining.slice(1);
+        } else if (remaining.endsWith('>')) {
+            push = 'late';
+            remaining = remaining.slice(0, -1);
+        }
 
         // Check for inversion (slash chord like "5/1")
         if (remaining.includes('/')) {
@@ -348,7 +376,9 @@ TA 5 5 4 4 1`;
             seventh,
             suspended,
             diminished,
-            inversion
+            inversion,
+            push,
+            staccato
         };
     }
 
@@ -360,9 +390,38 @@ TA 5 5 4 4 1`;
         // Convert parts to beat objects
         const allBeats = [];
         for (const part of parts) {
-            // Check if this is a held chord <number>
+            // Check for diamond chord with push notation
+            // Early push diamond: <<5> (push symbol before diamond)
+            // Late push diamond: <5>> (push symbol after diamond)
+            const earlyPushDiamondMatch = part.match(/^<<(.+)>$/);
+            const latePushDiamondMatch = part.match(/^<(.+)>>$/);
+            // Regular held chord: <number>
             const heldMatch = part.match(/^<(.+)>$/);
-            if (heldMatch) {
+            
+            if (earlyPushDiamondMatch) {
+                // Early push diamond chord
+                const chordNotation = this.parseChordNotation(earlyPushDiamondMatch[1]);
+                chordNotation.push = 'early';
+                allBeats.push({
+                    value: earlyPushDiamondMatch[1],
+                    held: true,
+                    tied: false,
+                    notation: chordNotation
+                });
+            }
+            else if (latePushDiamondMatch) {
+                // Late push diamond chord
+                const chordNotation = this.parseChordNotation(latePushDiamondMatch[1]);
+                chordNotation.push = 'late';
+                allBeats.push({
+                    value: latePushDiamondMatch[1],
+                    held: true,
+                    tied: false,
+                    notation: chordNotation
+                });
+            }
+            else if (heldMatch) {
+                // Regular held chord in diamond (no push)
                 const chordNotation = this.parseChordNotation(heldMatch[1]);
                 allBeats.push({
                     value: heldMatch[1],
@@ -373,11 +432,15 @@ TA 5 5 4 4 1`;
             }
             // Check if this is a tied chord (contains underscores)
             else if (part.includes('_')) {
+                // Parse each tied chord for push notation
+                const tiedParts = part.split('_');
+                const parsedTiedParts = tiedParts.map(p => this.parseChordNotation(p));
                 allBeats.push({
                     value: part,
                     held: false,
                     tied: true,
-                    notation: null
+                    notation: null,
+                    tiedNotations: parsedTiedParts
                 });
             }
             else {
@@ -409,41 +472,121 @@ TA 5 5 4 4 1`;
         return bars;
     }
 
-    renderChordWithNotation(notation) {
+    renderChordWithNotation(notation, wrapWithPush = true) {
         // Render a chord with seventh, suspended, and/or inversion notation
         if (!notation) return '';
 
-        let html = '';
+        let chordHtml = '';
 
         // Check if it's an inversion (slash chord)
         if (notation.inversion) {
             // Render as a fraction
-            html += '<span class="chord-inversion">';
-            html += `<span class="inversion-top">${this.escapeHtml(notation.base)}</span>`;
-            html += '<span class="inversion-slash">/</span>';
-            html += `<span class="inversion-bottom">${this.escapeHtml(notation.inversion)}</span>`;
-            html += '</span>';
+            chordHtml += '<span class="chord-inversion">';
+            chordHtml += `<span class="inversion-top">${this.escapeHtml(notation.base)}</span>`;
+            chordHtml += '<span class="inversion-slash">/</span>';
+            chordHtml += `<span class="inversion-bottom">${this.escapeHtml(notation.inversion)}</span>`;
+            chordHtml += '</span>';
         } else {
             // Regular chord
-            html += this.escapeHtml(notation.base);
+            chordHtml += this.escapeHtml(notation.base);
         }
 
         // Add diminished if present
         if (notation.diminished) {
-            html += '<sup class="chord-diminished">o</sup>';
+            chordHtml += '<sup class="chord-diminished">o</sup>';
         }
 
         // Add seventh if present
         if (notation.seventh) {
-            html += '<sup class="chord-seventh">7</sup>';
+            chordHtml += '<sup class="chord-seventh">7</sup>';
         }
 
         // Add suspended if present
         if (notation.suspended) {
-            html += `<sup class="chord-suspended">${this.escapeHtml(notation.suspended)}</sup>`;
+            chordHtml += `<sup class="chord-suspended">${this.escapeHtml(notation.suspended)}</sup>`;
         }
 
-        return html;
+        // Wrap with staccato and/or push notation if present
+        if (notation.staccato || (wrapWithPush && notation.push)) {
+            let result = chordHtml;
+            
+            // Add staccato symbol above chord
+            if (notation.staccato) {
+                const staccatoHtml = '<span class="staccato-symbol">^</span>';
+                result = `<span class="chord-with-staccato">${staccatoHtml}${result}</span>`;
+            }
+            
+            // Wrap with push notation if present
+            if (wrapWithPush && notation.push) {
+                const pushSymbol = notation.push === 'early' ? '&lt;' : '&gt;';
+                const pushClass = notation.push === 'early' ? 'push-early' : 'push-late';
+                result = `<span class="chord-with-push"><span class="push-symbol ${pushClass}">${pushSymbol}</span>${result}</span>`;
+            }
+            
+            return result;
+        }
+
+        return chordHtml;
+    }
+
+    renderTiedChordPart(notation) {
+        // Render a chord part for use within a tied chord group
+        // Uses inline styling to keep push symbol above chord without breaking the underline
+        if (!notation) return '';
+
+        let chordHtml = '';
+
+        // Check if it's an inversion (slash chord)
+        if (notation.inversion) {
+            chordHtml += '<span class="chord-inversion">';
+            chordHtml += `<span class="inversion-top">${this.escapeHtml(notation.base)}</span>`;
+            chordHtml += '<span class="inversion-slash">/</span>';
+            chordHtml += `<span class="inversion-bottom">${this.escapeHtml(notation.inversion)}</span>`;
+            chordHtml += '</span>';
+        } else {
+            chordHtml += this.escapeHtml(notation.base);
+        }
+
+        // Add diminished if present
+        if (notation.diminished) {
+            chordHtml += '<sup class="chord-diminished">o</sup>';
+        }
+
+        // Add seventh if present
+        if (notation.seventh) {
+            chordHtml += '<sup class="chord-seventh">7</sup>';
+        }
+
+        // Add suspended if present
+        if (notation.suspended) {
+            chordHtml += `<sup class="chord-suspended">${this.escapeHtml(notation.suspended)}</sup>`;
+        }
+
+        // For tied chords, wrap with staccato and/or push notation using inline display
+        // This preserves the underline across all tied chords
+        if (notation.staccato || notation.push) {
+            let result = chordHtml;
+            
+            // Add staccato symbol above chord
+            if (notation.staccato) {
+                const staccatoHtml = '<span class="staccato-symbol">^</span>';
+                result = `<span class="tied-chord-staccato">${staccatoHtml}${result}</span>`;
+            }
+            
+            // Wrap with push notation if present
+            if (notation.push) {
+                const pushSymbol = notation.push === 'early' ? '&lt;' : '&gt;';
+                const pushClass = notation.push === 'early' ? 'push-early' : 'push-late';
+                result = `<span class="tied-chord-part"><span class="push-symbol ${pushClass}">${pushSymbol}</span>${result}</span>`;
+            } else if (notation.staccato) {
+                // If only staccato (no push), still need the tied-chord-part wrapper for proper inline display
+                result = `<span class="tied-chord-part">${result}</span>`;
+            }
+            
+            return result;
+        }
+
+        return chordHtml;
     }
 
     renderTimeSig(time) {
@@ -555,12 +698,27 @@ TA 5 5 4 4 1`;
                         let chordHtml = '';
                         if (beat.held && beat.value) {
                             // Held chord in diamond
-                            const chordContent = beat.notation ? this.renderChordWithNotation(beat.notation) : this.escapeHtml(displayBeat);
-                            chordHtml = `<span class="diamond"><span class="diamond-text">${chordContent}</span></span>`;
+                            // Render chord content without push wrapper (we'll wrap the diamond)
+                            const chordContent = beat.notation ? this.renderChordWithNotation(beat.notation, false) : this.escapeHtml(displayBeat);
+                            let diamondHtml = `<span class="diamond"><span class="diamond-text">${chordContent}</span></span>`;
+                            
+                            // Wrap diamond with push notation if present
+                            if (beat.notation && beat.notation.push) {
+                                const pushSymbol = beat.notation.push === 'early' ? '&lt;' : '&gt;';
+                                const pushClass = beat.notation.push === 'early' ? 'push-early' : 'push-late';
+                                chordHtml = `<span class="chord-with-push"><span class="push-symbol ${pushClass}">${pushSymbol}</span>${diamondHtml}</span>`;
+                            } else {
+                                chordHtml = diamondHtml;
+                            }
                         } else if (beat.tied && beat.value) {
                             // Tied chords are underlined and grouped tightly
-                            const tiedParts = beat.value.split('_').map(p => this.escapeHtml(p)).join('');
-                            chordHtml = tiedParts;
+                            // Each tied chord can have its own push notation displayed above it
+                            if (beat.tiedNotations) {
+                                chordHtml = beat.tiedNotations.map(notation => this.renderTiedChordPart(notation)).join('');
+                            } else {
+                                const tiedParts = beat.value.split('_').map(p => this.escapeHtml(p)).join('');
+                                chordHtml = tiedParts;
+                            }
                         } else if (displayBeat) {
                             // Regular chord with potential notation
                             chordHtml = beat.notation ? this.renderChordWithNotation(beat.notation) : this.escapeHtml(displayBeat);

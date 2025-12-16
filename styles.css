@@ -567,6 +567,78 @@ header h1 {
     letter-spacing: 1px;
 }
 
+/* Tied chord parts with push notation - keeps underline intact */
+.tied-chord-part {
+    position: relative;
+    display: inline;
+}
+
+.tied-chord-part .push-symbol {
+    position: absolute;
+    top: -0.55em;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.85em;
+    font-weight: bold;
+    line-height: 1;
+}
+
+/* Push notation - < for early push, > for late push */
+.chord-with-push {
+    position: relative;
+    display: inline-block;
+}
+
+.push-symbol {
+    position: absolute;
+    top: -0.55em;
+    font-size: 0.85em;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.push-early {
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.push-late {
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* Staccato accent notation - ^ above chord */
+.chord-with-staccato {
+    position: relative;
+    display: inline-block;
+}
+
+.staccato-symbol {
+    position: absolute;
+    top: -0.35em;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.1em;
+    font-weight: bold;
+    line-height: 1;
+}
+
+/* Staccato in tied chords - keeps underline intact */
+.tied-chord-staccato {
+    position: relative;
+    display: inline;
+}
+
+.tied-chord-staccato .staccato-symbol {
+    position: absolute;
+    top: -0.35em;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.1em;
+    font-weight: bold;
+    line-height: 1;
+}
+
 /* Chord variations */
 .chord-seventh,
 .chord-suspended,
@@ -710,9 +782,10 @@ header h1 {
     margin-top: auto;
     padding-top: 20px;
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 3px;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 20px;
     font-size: 14px;
 }
 
