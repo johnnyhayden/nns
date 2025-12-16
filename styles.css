@@ -503,8 +503,8 @@ header h1 {
     box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.5) inset;
     /* 8.5" x 11" at 96 DPI = 816px x 1056px, with 0.5in margins */
     width: 8.5in;
-    height: 11in;
-    max-height: 11in;
+    min-height: 10in; /* 11in - 1in margins (0.5in top + 0.5in bottom) */
+    height: 10in;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -938,6 +938,7 @@ header h1 {
         display: flex !important;
         flex-direction: column;
         min-height: 10in; /* 11in - 1in margins */
+        height: 10in;
         padding: 0;
         width: 100%;
         box-sizing: border-box;
@@ -948,14 +949,15 @@ header h1 {
         padding: 0;
         box-shadow: none;
         width: 100%;
-        height: auto;
-        max-height: none;
+        min-height: 10in;
+        height: 10in;
         overflow: visible;
         background: white;
     }
 
     .chart-content {
         flex: 1;
+        min-height: 0;
     }
 
     .chart-content.two-column {
