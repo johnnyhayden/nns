@@ -501,12 +501,14 @@ header h1 {
     border: 2px solid rgba(102, 126, 234, 0.2);
     border-radius: 8px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.5) inset;
-    /* 8.5" x 11" at 96 DPI = 816px x 1056px, minus padding */
+    /* 8.5" x 11" at 96 DPI = 816px x 1056px, with 0.5in margins */
     width: 8.5in;
-    min-height: 11in;
+    height: 11in;
+    max-height: 11in;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 /* Chart Header */
@@ -514,7 +516,7 @@ header h1 {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: start;
-    margin-bottom: 30px;
+    margin-bottom: 15px;
     gap: 20px;
 }
 
@@ -648,13 +650,14 @@ header h1 {
 .tied-chord {
     text-decoration: underline;
     letter-spacing: 1px;
+    position: relative;
 }
 
 /* Tied chord parts with push notation - keeps underline intact */
 .tied-chord-part {
-    position: relative;
     display: inline;
     margin-right: 2px;
+    text-decoration: inherit;
 }
 
 .tied-chord-part .push-symbol {
@@ -665,12 +668,13 @@ header h1 {
     font-size: 0.85em;
     font-weight: bold;
     line-height: 1;
+    text-decoration: none;
 }
 
 /* Push notation - < for early push, > for late push */
 .chord-with-push {
     position: relative;
-    display: inline-block;
+    display: inline;
 }
 
 .push-symbol {
@@ -694,7 +698,7 @@ header h1 {
 /* Staccato accent notation - ^ above chord */
 .chord-with-staccato {
     position: relative;
-    display: inline-block;
+    display: inline;
 }
 
 .staccato-symbol {
@@ -705,12 +709,13 @@ header h1 {
     font-size: 1.1em;
     font-weight: bold;
     line-height: 1;
+    text-decoration: none;
 }
 
 /* Staccato in tied chords - keeps underline intact */
 .tied-chord-staccato {
-    position: relative;
     display: inline;
+    text-decoration: inherit;
 }
 
 .tied-chord-staccato .staccato-symbol {
@@ -721,12 +726,13 @@ header h1 {
     font-size: 1.1em;
     font-weight: bold;
     line-height: 1;
+    text-decoration: none;
 }
 
 /* Beat tick marks - ' above chord to indicate beat count */
 .chord-with-ticks {
     position: relative;
-    display: inline-block;
+    display: inline;
 }
 
 .tick-marks {
@@ -738,12 +744,13 @@ header h1 {
     font-weight: bold;
     line-height: 1;
     letter-spacing: -0.1em;
+    text-decoration: none;
 }
 
 /* Tick marks in tied chords - keeps underline intact */
 .tied-chord-ticks {
-    position: relative;
     display: inline;
+    text-decoration: inherit;
 }
 
 .tied-chord-ticks .tick-marks {
@@ -755,6 +762,7 @@ header h1 {
     font-weight: bold;
     line-height: 1;
     letter-spacing: -0.1em;
+    text-decoration: none;
 }
 
 /* Chord variations */
@@ -885,13 +893,13 @@ header h1 {
 
 .repeat-bar-thin {
     width: 2px;
-    height: 20px;
+    height: 30px;
     background-color: #333;
 }
 
 .repeat-bar-thick {
     width: 4px;
-    height: 20px;
+    height: 30px;
     background-color: #333;
 }
 
@@ -938,7 +946,10 @@ header h1 {
         padding: 0;
         box-shadow: none;
         width: 100%;
-        min-height: auto;
+        height: auto;
+        max-height: none;
+        overflow: visible;
+        background: white;
     }
 
     .chart-content {
