@@ -103,65 +103,98 @@ body {
     font-family: Helvetica, Arial, sans-serif;
 }
 
-/* Font size classes - small is 100%, medium is 120%, large is 144% */
+/* Font size classes - increased by 20% more for readability */
 .size-small {
-    /* Previously medium - now the smallest option */
+    font-size: 144%;
+}
+
+.size-small .beat {
+    font-size: 25.92px;
+    min-width: 52px;
+}
+
+.size-small .section-box {
+    min-width: 34.8px;
+    height: 34.8px;
+    font-size: 23.04px;
+}
+
+.size-small .diamond {
+    width: 26.4px;
+    height: 26.4px;
+}
+
+.size-small .diamond:has(.chord-seventh),
+.size-small .diamond:has(.chord-suspended),
+.size-small .diamond:has(.chord-diminished) {
+    width: 31.2px;
+    height: 31.2px;
+}
+
+.size-small .diamond-text {
+    font-size: 25.92px;
 }
 
 .size-medium {
-    font-size: 120%;
-}
-
-.size-medium .chart-title {
-    font-size: 33.6px;
+    font-size: 172.8%;
 }
 
 .size-medium .beat {
-    font-size: 21.6px;
+    font-size: 31.1px;
     min-width: 60px;
 }
 
 .size-medium .section-box {
-    min-width: 29px;
-    height: 29px;
-    font-size: 19.2px;
+    min-width: 41.76px;
+    height: 41.76px;
+    font-size: 27.65px;
 }
 
 .size-medium .diamond {
-    width: 22px;
-    height: 22px;
+    width: 31.68px;
+    height: 31.68px;
+}
+
+.size-medium .diamond:has(.chord-seventh),
+.size-medium .diamond:has(.chord-suspended),
+.size-medium .diamond:has(.chord-diminished) {
+    width: 37.2px;
+    height: 37.2px;
 }
 
 .size-medium .diamond-text {
-    font-size: 21.6px;
+    font-size: 31.1px;
 }
 
 .size-large {
-    font-size: 130%;
-}
-
-.size-large .chart-title {
-    font-size: 36.4px;
+    font-size: 187.2%;
 }
 
 .size-large .beat {
-    font-size: 23.4px;
-    min-width: 65px;
+    font-size: 33.7px;
+    min-width: 64px;
 }
 
 .size-large .section-box {
-    min-width: 31px;
-    height: 31px;
-    font-size: 20.8px;
+    min-width: 44.64px;
+    height: 44.64px;
+    font-size: 29.95px;
 }
 
 .size-large .diamond {
-    width: 23px;
-    height: 23px;
+    width: 33.12px;
+    height: 33.12px;
+}
+
+.size-large .diamond:has(.chord-seventh),
+.size-large .diamond:has(.chord-suspended),
+.size-large .diamond:has(.chord-diminished) {
+    width: 39.6px;
+    height: 39.6px;
 }
 
 .size-large .diamond-text {
-    font-size: 20.8px;
+    font-size: 33.7px;
 }
 
 /* App Container */
@@ -500,15 +533,15 @@ header h1 {
     font-family: 'Courier New', monospace;
     font-size: 16px;
     line-height: 1.8;
-    padding: 0.5in;
+    padding: 0.25in 0.25in 0 0.25in;
     background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
     border: 2px solid rgba(102, 126, 234, 0.2);
     border-radius: 8px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.5) inset;
-    /* 8.5" x 11" at 96 DPI = 816px x 1056px, with 0.5in margins */
+    /* Extended height with top/left/right margins */
     width: 8.5in;
-    min-height: 10in; /* 11in - 1in margins (0.5in top + 0.5in bottom) */
-    height: 10in;
+    min-height: 11.25in;
+    height: 11.25in;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -525,11 +558,20 @@ header h1 {
 }
 
 .header-left {
-    /* Spacer for centering */
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    font-size: 19.2px;
+}
+
+.header-left .separator {
+    color: #333;
 }
 
 .chart-title {
-    font-size: 28px;
+    font-size: 33.6px;
     font-weight: bold;
     text-align: center;
 }
@@ -540,11 +582,22 @@ header h1 {
     align-items: center;
     justify-content: flex-end;
     gap: 8px;
-    font-size: 16px;
+    font-size: 19.2px;
 }
 
 .header-right .separator {
     color: #333;
+}
+
+.key-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 2px solid #333;
+    border-radius: 50%;
+    font-weight: bold;
 }
 
 /* Time signature as diagonal fraction */
@@ -594,21 +647,23 @@ header h1 {
 
 .chart-content.two-column {
     column-count: 2;
-    column-gap: 40px;
+    column-gap: 24px;
     column-rule: 2px solid #333;
     column-fill: auto;
-    height: 100%;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .chart-section {
     break-inside: avoid;
     page-break-inside: avoid;
-    margin-bottom: 25px;
+    margin-bottom: 15px;
 }
 
 .section-wrapper {
     display: grid;
-    grid-template-columns: 60px 1fr;
+    grid-template-columns: 52px 1fr;
     gap: 0;
     align-items: start;
 }
@@ -642,7 +697,7 @@ header h1 {
 .chart-bars {
     display: grid;
     grid-template-columns: repeat(4, auto);
-    gap: 5px 5px;
+    gap: 3px 2px;
     align-items: center;
 }
 
@@ -744,6 +799,41 @@ header h1 {
     left: 50%;
     transform: translateX(-50%);
     font-size: 1.1em;
+    font-weight: bold;
+    line-height: 1;
+    text-decoration: none;
+}
+
+/* Staccato dot notation - • above chord */
+.chord-with-staccato-dot {
+    position: relative;
+    display: inline;
+}
+
+.chord-with-staccato-dot .staccato-dot-symbol {
+    position: absolute;
+    top: -1.0em;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.9em;
+    font-weight: bold;
+    line-height: 1;
+    text-decoration: none;
+}
+
+/* Staccato dot in tied chords - keeps underline intact */
+.tied-chord-staccato-dot {
+    position: relative;
+    display: inline;
+    text-decoration: inherit;
+}
+
+.tied-chord-staccato-dot .staccato-dot-symbol {
+    position: absolute;
+    top: -0.5em;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.9em;
     font-weight: bold;
     line-height: 1;
     text-decoration: none;
@@ -851,6 +941,14 @@ header h1 {
     transform: rotate(45deg);
 }
 
+/* Larger diamond when it contains superscripts */
+.diamond:has(.chord-seventh),
+.diamond:has(.chord-suspended),
+.diamond:has(.chord-diminished) {
+    width: 22px;
+    height: 22px;
+}
+
 .diamond-text {
     transform: rotate(-45deg);
     font-weight: bold;
@@ -879,7 +977,8 @@ header h1 {
 }
 
 .repeat-end {
-    left: calc(50% + 8px);
+    left: 50%;
+    margin-left: 12px;
 }
 
 /* The repeat symbol structure: dots + thick/thin bars */
@@ -904,6 +1003,8 @@ header h1 {
     min-height: 5px;
     background-color: #333;
     border-radius: 50%;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
 }
 
 .repeat-bars {
@@ -916,12 +1017,16 @@ header h1 {
     width: 2px;
     height: 30px;
     background-color: #333;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
 }
 
 .repeat-bar-thick {
     width: 4px;
     height: 30px;
     background-color: #333;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
 }
 
 /* Chart Footer - pushed to bottom right */
@@ -933,14 +1038,14 @@ header h1 {
     justify-content: flex-end;
     align-items: center;
     gap: 20px;
-    font-size: 14px;
+    font-size: 19.2px;
 }
 
 /* Print Styles */
 @media print {
     @page {
         size: 8.5in 11in;
-        margin: 0.5in;
+        margin: 0.25in;
     }
 
     body {
@@ -956,8 +1061,8 @@ header h1 {
     .print-only {
         display: flex !important;
         flex-direction: column;
-        min-height: 10in; /* 11in - 1in margins */
-        height: 10in;
+        min-height: 10.5in; /* 11in - 0.5in margins */
+        height: 10.5in;
         padding: 0;
         width: 100%;
         box-sizing: border-box;
@@ -968,8 +1073,8 @@ header h1 {
         padding: 0;
         box-shadow: none;
         width: 100%;
-        min-height: 10in;
-        height: 10in;
+        min-height: 10.5in;
+        height: 10.5in;
         overflow: visible;
         background: white;
     }
@@ -981,8 +1086,9 @@ header h1 {
 
     .chart-content.two-column {
         column-count: 2;
-        column-gap: 30px;
+        column-gap: 24px;
         column-fill: auto;
+        overflow: hidden;
     }
 
     .chart-section {

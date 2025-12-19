@@ -87,8 +87,12 @@ C: 17 5 6- 4
 :||
 
 v2: 1^ 4^ 5^ 1^
-#Staccato and push notation
+#Staccato accent and push notation
 1 4< 5> 1
+
+v3: 1* 4* 5* 1*
+#Staccato dots
+1_4*_5* 1
 
 B: 4sus 5/1 7o 1
 #Suspended, inversion, diminished
@@ -106,7 +110,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
         this.chartInput.value = demoChart;
         this.twoColumnToggle.checked = true;
         this.fontSelect.value = 'handwriting';
-        this.fontSizeSelect.value = 'medium';
+        this.fontSizeSelect.value = 'large';
         this.updatePreview();
     }
 
@@ -328,18 +332,27 @@ Tag: 1'_4''' 1''_4'_5' <1>
 
     processSectionLabel(label) {
         // Determine how to render the section label
-        // Rules: If mixed case, render mixed case. If upper/lower only, render upper case.
-
-        const hasUpper = /[A-Z]/.test(label);
-        const hasLower = /[a-z]/.test(label);
+        // Rules:
+        // - 3+ letters: preserve original case
+        // - 1-2 letters: If mixed case, render mixed case. If upper/lower only, render upper case.
 
         let displayLabel = label;
-        if (hasUpper && hasLower) {
-            // Mixed case - keep as is
+
+        if (label.length >= 3) {
+            // 3 or more letters - preserve original case
             displayLabel = label;
         } else {
-            // All upper or all lower - render as upper case
-            displayLabel = label.toUpperCase();
+            // 1-2 letters - apply case rules
+            const hasUpper = /[A-Z]/.test(label);
+            const hasLower = /[a-z]/.test(label);
+
+            if (hasUpper && hasLower) {
+                // Mixed case - keep as is
+                displayLabel = label;
+            } else {
+                // All upper or all lower - render as upper case
+                displayLabel = label.toUpperCase();
+            }
         }
 
         return {
@@ -381,7 +394,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
 
     parseChordNotation(chordStr) {
         // Parse a chord string to extract components
-        // Returns: { base, seventh, suspended, diminished, inversion, push, staccato, ticks }
+        // Returns: { base, seventh, suspended, diminished, inversion, push, staccato, staccatoDot, ticks }
 
         let remaining = chordStr;
         let seventh = false;
@@ -390,6 +403,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
         let inversion = null; // bass note for slash chords
         let push = null; // 'early' (<) or 'late' (>)
         let staccato = false; // ^ for staccato accent
+        let staccatoDot = false; // * for staccato dot
         let ticks = 0; // number of tick marks (') for beat count
 
         // Check for tick marks at the end (e.g., 1', 4'', 5''')
@@ -397,6 +411,12 @@ Tag: 1'_4''' 1''_4'_5' <1>
         if (tickMatch) {
             ticks = tickMatch[0].length;
             remaining = remaining.slice(0, -ticks);
+        }
+
+        // Check for staccato dot at the end (*)
+        if (remaining.endsWith('*')) {
+            staccatoDot = true;
+            remaining = remaining.slice(0, -1);
         }
 
         // Check for staccato accent at the end (^)
@@ -458,6 +478,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
             inversion,
             push,
             staccato,
+            staccatoDot,
             ticks
         };
     }
@@ -620,30 +641,36 @@ Tag: 1'_4''' 1''_4'_5' <1>
             chordHtml += `<sup class="chord-suspended">${this.escapeHtml(notation.suspended)}</sup>`;
         }
 
-        // Wrap with ticks, staccato and/or push notation if present
-        if (notation.ticks || notation.staccato || (wrapWithPush && notation.push)) {
+        // Wrap with ticks, staccato, staccato dot and/or push notation if present
+        if (notation.ticks || notation.staccato || notation.staccatoDot || (wrapWithPush && notation.push)) {
             let result = chordHtml;
-            
+
             // Add tick marks above chord
             if (notation.ticks) {
                 const ticksStr = "'".repeat(notation.ticks);
                 const ticksHtml = `<span class="tick-marks">${ticksStr}</span>`;
                 result = `<span class="chord-with-ticks">${ticksHtml}${result}</span>`;
             }
-            
+
+            // Add staccato dot above chord
+            if (notation.staccatoDot) {
+                const staccatoDotHtml = '<span class="staccato-dot-symbol">•</span>';
+                result = `<span class="chord-with-staccato-dot">${staccatoDotHtml}${result}</span>`;
+            }
+
             // Add staccato symbol above chord
             if (notation.staccato) {
                 const staccatoHtml = '<span class="staccato-symbol">^</span>';
                 result = `<span class="chord-with-staccato">${staccatoHtml}${result}</span>`;
             }
-            
+
             // Wrap with push notation if present
             if (wrapWithPush && notation.push) {
                 const pushSymbol = notation.push === 'early' ? '&lt;' : '&gt;';
                 const pushClass = notation.push === 'early' ? 'push-early' : 'push-late';
                 result = `<span class="chord-with-push"><span class="push-symbol ${pushClass}">${pushSymbol}</span>${result}</span>`;
             }
-            
+
             return result;
         }
 
@@ -683,34 +710,40 @@ Tag: 1'_4''' 1''_4'_5' <1>
             chordHtml += `<sup class="chord-suspended">${this.escapeHtml(notation.suspended)}</sup>`;
         }
 
-        // For tied chords, wrap with ticks, staccato and/or push notation using inline display
+        // For tied chords, wrap with ticks, staccato, staccato dot and/or push notation using inline display
         // This preserves the underline across all tied chords
-        if (notation.ticks || notation.staccato || notation.push) {
+        if (notation.ticks || notation.staccato || notation.staccatoDot || notation.push) {
             let result = chordHtml;
-            
+
             // Add tick marks above chord
             if (notation.ticks) {
                 const ticksStr = "'".repeat(notation.ticks);
                 const ticksHtml = `<span class="tick-marks">${ticksStr}</span>`;
                 result = `<span class="tied-chord-ticks">${ticksHtml}${result}</span>`;
             }
-            
+
+            // Add staccato dot above chord
+            if (notation.staccatoDot) {
+                const staccatoDotHtml = '<span class="staccato-dot-symbol">•</span>';
+                result = `<span class="tied-chord-staccato-dot">${staccatoDotHtml}${result}</span>`;
+            }
+
             // Add staccato symbol above chord
             if (notation.staccato) {
                 const staccatoHtml = '<span class="staccato-symbol">^</span>';
                 result = `<span class="tied-chord-staccato">${staccatoHtml}${result}</span>`;
             }
-            
+
             // Wrap with push notation if present
             if (notation.push) {
                 const pushSymbol = notation.push === 'early' ? '&lt;' : '&gt;';
                 const pushClass = notation.push === 'early' ? 'push-early' : 'push-late';
                 result = `<span class="tied-chord-part"><span class="push-symbol ${pushClass}">${pushSymbol}</span>${result}</span>`;
-            } else if (notation.ticks || notation.staccato) {
-                // If only ticks or staccato (no push), still need the tied-chord-part wrapper for proper inline display
+            } else if (notation.ticks || notation.staccato || notation.staccatoDot) {
+                // If only ticks, staccato, or staccato dot (no push), still need the tied-chord-part wrapper for proper inline display
                 result = `<span class="tied-chord-part">${result}</span>`;
             }
-            
+
             return result;
         }
 
@@ -757,11 +790,20 @@ Tag: 1'_4''' 1''_4'_5' <1>
     renderChart(sections, metadata, twoColumn = false, headerComment = null) {
         let html = '';
 
-        // Render header with title centered and tempo/key on right
+        // Render header with key/time on left, title centered, tempo on right
         html += '<div class="chart-header">';
 
-        // Left spacer for centering
-        html += '<div class="header-left"></div>';
+        // Left info (key and time)
+        html += '<div class="header-left">';
+        const leftParts = [];
+        if (metadata.key) {
+            leftParts.push(`<span class="key-display"><span class="key-circle">${this.escapeHtml(metadata.key)}</span></span>`);
+        }
+        if (metadata.time) {
+            leftParts.push(`<span class="time-display">${this.renderTimeSig(metadata.time)}</span>`);
+        }
+        html += leftParts.join('<span class="separator"> </span>');
+        html += '</div>';
 
         // Center title
         if (metadata.title) {
@@ -770,19 +812,11 @@ Tag: 1'_4''' 1''_4'_5' <1>
             html += '<div class="chart-title"></div>';
         }
 
-        // Right info (key, tempo and time)
+        // Right info (tempo)
         html += '<div class="header-right">';
-        const headerParts = [];
-        if (metadata.key) {
-            headerParts.push(`<span class="key-display">${this.escapeHtml(metadata.key)}</span>`);
-        }
         if (metadata.tempo) {
-            headerParts.push(`<span class="tempo-display">${this.escapeHtml(metadata.tempo)} bpm</span>`);
+            html += `<span class="tempo-display">${this.escapeHtml(metadata.tempo)} bpm</span>`;
         }
-        if (metadata.time) {
-            headerParts.push(`<span class="time-display">${this.renderTimeSig(metadata.time)}</span>`);
-        }
-        html += headerParts.join('<span class="separator"> • </span>');
         html += '</div>';
 
         html += '</div>';
@@ -991,7 +1025,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
                 this.chartInput.value = data.chart || '';
                 this.twoColumnToggle.checked = data.twoColumn !== undefined ? data.twoColumn : true;
                 this.fontSelect.value = data.font || 'handwriting';
-                this.fontSizeSelect.value = data.fontSize || 'medium';
+                this.fontSizeSelect.value = data.fontSize || 'large';
             } catch (e) {
                 console.error('Failed to load auto-save:', e);
             }
@@ -1050,7 +1084,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
         this.chartInput.value = '';
         this.twoColumnToggle.checked = true;
         this.fontSelect.value = 'handwriting';
-        this.fontSizeSelect.value = 'medium';
+        this.fontSizeSelect.value = 'large';
         this.updatePreview();
     }
 
