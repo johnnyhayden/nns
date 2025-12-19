@@ -3,11 +3,34 @@
 class NNSChartApp {
     constructor() {
         this.currentChartId = null;
-        this.charts = this.loadChartsFromStorage();
+        this.supportsFileSystemAccess = 'showDirectoryPicker' in window;
+        this.directoryHandle = null;
+        this.useFileSystem = false;
+        this.indexedDB = null;
+        this.charts = [];
+
         this.initializeElements();
         this.attachEventListeners();
+
+        // Async initialization
+        this.initAsync();
+    }
+
+    async initAsync() {
+        if (this.supportsFileSystemAccess) {
+            try {
+                await this.initIndexedDB();
+                await this.loadDirectoryHandleFromDB();
+            } catch (error) {
+                console.error('Failed to initialize file system:', error);
+            }
+        }
+
+        await this.loadCharts();
         this.renderSavedCharts();
+        this.loadAutoSave();
         this.updatePreview();
+        this.updateDirectoryUI();
     }
 
     initializeElements() {
@@ -61,6 +84,12 @@ class NNSChartApp {
                 e.preventDefault();
                 this.loadDemo();
             });
+        }
+
+        // Storage toggle button
+        const storageToggleBtn = document.getElementById('storage-toggle-btn');
+        if (storageToggleBtn) {
+            storageToggleBtn.addEventListener('click', () => this.toggleStorageMode());
         }
     }
 
@@ -986,7 +1015,11 @@ Tag: 1'_4''' 1''_4'_5' <1>
 
         // Update document title for PDF filename
         if (metadata.title && metadata.title.trim()) {
-            document.title = `${metadata.title} Chart`;
+            let pdfTitle = metadata.title.trim();
+            if (metadata.songwriter && metadata.songwriter.trim()) {
+                pdfTitle += ' - ' + metadata.songwriter.trim();
+            }
+            document.title = pdfTitle;
         } else {
             document.title = 'Nashville Number System Chart Maker';
         }
@@ -1032,41 +1065,88 @@ Tag: 1'_4''' 1''_4'_5' <1>
         }
     }
 
-    saveChart() {
-        const title = this.titleInput.value.trim() || 'Untitled Chart';
-        const key = this.keyInput.value.trim();
-        const tempo = this.tempoInput.value.trim();
-        const time = this.timeInput.value.trim();
-        const songwriter = this.songwriterInput.value.trim();
-        const chartedBy = this.chartedByInput.value.trim();
-        const chart = this.chartInput.value;
+    async saveChart() {
+        // Check if we should prompt for directory
+        if (this.supportsFileSystemAccess && !this.useFileSystem && !this.directoryHandle) {
+            const shouldUseFS = confirm(
+                'Save charts to a folder on your computer?\n\n' +
+                'Benefits:\n' +
+                '• Easy backup and sharing\n' +
+                '• Access charts outside browser\n' +
+                '\n' +
+                'Choose "Cancel" to use browser storage instead.'
+            );
+
+            if (shouldUseFS) {
+                const success = await this.promptForDirectory();
+                if (!success) {
+                    // User cancelled, fall back to localStorage
+                    this.saveChartToLocalStorage();
+                    return;
+                }
+            } else {
+                // User chose localStorage
+                this.saveChartToLocalStorage();
+                return;
+            }
+        }
 
         const chartData = {
             id: this.currentChartId || Date.now().toString(),
-            title,
-            key,
-            tempo,
-            time,
-            songwriter,
-            chartedBy,
-            chart,
+            title: this.titleInput.value.trim() || 'Untitled Chart',
+            key: this.keyInput.value.trim(),
+            tempo: this.tempoInput.value.trim(),
+            time: this.timeInput.value.trim(),
+            songwriter: this.songwriterInput.value.trim(),
+            chartedBy: this.chartedByInput.value.trim(),
+            chart: this.chartInput.value,
             savedAt: new Date().toISOString()
         };
 
-        // Update or add chart
-        const existingIndex = this.charts.findIndex(c => c.id === chartData.id);
-        if (existingIndex >= 0) {
-            this.charts[existingIndex] = chartData;
-            alert(`Chart "${title}" updated successfully!`);
-        } else {
-            this.charts.push(chartData);
-            alert(`Chart "${title}" saved successfully!`);
+        try {
+            if (this.useFileSystem) {
+                await this.saveChartToFile(chartData);
+            } else {
+                this.saveChartToLocalStorage(chartData);
+            }
+
+            this.currentChartId = null;
+            await this.loadCharts();
+            this.renderSavedCharts();
+            this.flashSaveButton();
+
+        } catch (error) {
+            console.error('Failed to save chart:', error);
+            this.flashSaveButton(true); // Pass true to indicate error
+        }
+    }
+
+    saveChartToLocalStorage(chartData) {
+        if (!chartData) {
+            chartData = {
+                id: this.currentChartId || Date.now().toString(),
+                title: this.titleInput.value.trim() || 'Untitled Chart',
+                key: this.keyInput.value.trim(),
+                tempo: this.tempoInput.value.trim(),
+                time: this.timeInput.value.trim(),
+                songwriter: this.songwriterInput.value.trim(),
+                chartedBy: this.chartedByInput.value.trim(),
+                chart: this.chartInput.value,
+                savedAt: new Date().toISOString()
+            };
         }
 
-        // Reset currentChartId so next save creates a new chart
-        this.currentChartId = null;
-        this.saveChartsToStorage();
-        this.renderSavedCharts();
+        const charts = this.loadChartsFromLocalStorage();
+        const existingIndex = charts.findIndex(c => c.id === chartData.id);
+
+        if (existingIndex >= 0) {
+            charts[existingIndex] = chartData;
+        } else {
+            charts.push(chartData);
+        }
+
+        localStorage.setItem('nns_saved_charts', JSON.stringify(charts));
+        this.charts = charts;
     }
 
     newChart() {
@@ -1103,18 +1183,33 @@ Tag: 1'_4''' 1''_4'_5' <1>
         this.updatePreview();
     }
 
-    deleteChart(chartId) {
+    async deleteChart(chartId) {
         const chart = this.charts.find(c => c.id === chartId);
         if (!chart) return;
 
         if (!confirm(`Delete chart "${chart.title}"?`)) return;
 
-        this.charts = this.charts.filter(c => c.id !== chartId);
-        if (this.currentChartId === chartId) {
-            this.currentChartId = null;
+        try {
+            if (this.useFileSystem) {
+                const filename = this.sanitizeFilename(chart.title, chart.songwriter) + '.nns';
+                await this.deleteChartFile(filename);
+            } else {
+                const charts = this.loadChartsFromLocalStorage();
+                const filtered = charts.filter(c => c.id !== chartId);
+                localStorage.setItem('nns_saved_charts', JSON.stringify(filtered));
+            }
+
+            if (this.currentChartId === chartId) {
+                this.currentChartId = null;
+            }
+
+            await this.loadCharts();
+            this.renderSavedCharts();
+
+        } catch (error) {
+            console.error('Failed to delete chart:', error);
+            alert(`Failed to delete chart: ${error.message}`);
         }
-        this.saveChartsToStorage();
-        this.renderSavedCharts();
     }
 
     renderSavedCharts() {
@@ -1183,10 +1278,372 @@ Tag: 1'_4''' 1''_4'_5' <1>
         window.print();
     }
 
+    flashSaveButton(isError = false) {
+        const originalText = this.saveBtn.textContent;
+        const originalClass = this.saveBtn.className;
+
+        // Lock the width to prevent resize
+        const currentWidth = this.saveBtn.offsetWidth;
+        this.saveBtn.style.width = `${currentWidth}px`;
+
+        if (isError) {
+            this.saveBtn.textContent = 'Error!';
+            this.saveBtn.classList.add('btn-error');
+        } else {
+            this.saveBtn.textContent = 'Saved';
+            this.saveBtn.classList.add('btn-saved');
+        }
+
+        // Fade back after 1.5 seconds
+        setTimeout(() => {
+            this.saveBtn.classList.add('btn-fade');
+
+            setTimeout(() => {
+                this.saveBtn.textContent = originalText;
+                this.saveBtn.className = originalClass;
+                this.saveBtn.style.width = ''; // Remove fixed width
+            }, 300); // Match CSS transition duration
+        }, 1500);
+    }
+
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    // IndexedDB methods for directory handle persistence
+    async initIndexedDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('nns_db', 1);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+                this.indexedDB = request.result;
+                resolve();
+            };
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains('settings')) {
+                    db.createObjectStore('settings');
+                }
+            };
+        });
+    }
+
+    async saveDirectoryHandle(handle) {
+        return new Promise((resolve, reject) => {
+            const tx = this.indexedDB.transaction('settings', 'readwrite');
+            const store = tx.objectStore('settings');
+            const request = store.put(handle, 'directory_handle');
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async loadDirectoryHandleFromDB() {
+        if (!this.indexedDB) return;
+
+        return new Promise((resolve, reject) => {
+            const tx = this.indexedDB.transaction('settings', 'readonly');
+            const store = tx.objectStore('settings');
+            const request = store.get('directory_handle');
+            request.onsuccess = async () => {
+                const handle = request.result;
+                if (handle) {
+                    const permission = await this.verifyDirectoryPermission(handle);
+                    if (permission) {
+                        this.directoryHandle = handle;
+                        this.useFileSystem = true;
+                    }
+                }
+                resolve();
+            };
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async clearDirectoryHandle() {
+        if (!this.indexedDB) return;
+
+        return new Promise((resolve, reject) => {
+            const tx = this.indexedDB.transaction('settings', 'readwrite');
+            const store = tx.objectStore('settings');
+            const request = store.delete('directory_handle');
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    async verifyDirectoryPermission(handle) {
+        const options = { mode: 'readwrite' };
+        const permission = await handle.queryPermission(options);
+
+        if (permission === 'granted') return true;
+        if (permission === 'prompt') {
+            const result = await handle.requestPermission(options);
+            return result === 'granted';
+        }
+        return false;
+    }
+
+    // File system operations
+    async promptForDirectory() {
+        try {
+            const handle = await window.showDirectoryPicker({
+                mode: 'readwrite',
+                startIn: 'documents'
+            });
+
+            await this.saveDirectoryHandle(handle);
+            this.directoryHandle = handle;
+            this.useFileSystem = true;
+            this.updateDirectoryUI();
+
+            // Offer to migrate existing charts
+            await this.offerMigration();
+
+            return true;
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error('Failed to select directory:', error);
+            }
+            return false;
+        }
+    }
+
+    sanitizeFilename(title, artist) {
+        let filename = '';
+
+        if (title && title.trim()) {
+            filename = title.trim();
+        } else {
+            filename = 'Untitled Chart';
+        }
+
+        if (artist && artist.trim()) {
+            filename += ' - ' + artist.trim();
+        }
+
+        return filename.replace(/[/\\:*?"<>|]/g, '_');
+    }
+
+    formatNNSFile(chartData) {
+        const metadata = [
+            '---',
+            `title: ${chartData.title || 'Untitled Chart'}`,
+            `key: ${chartData.key || ''}`,
+            `tempo: ${chartData.tempo || ''}`,
+            `time: ${chartData.time || ''}`,
+            `songwriter: ${chartData.songwriter || ''}`,
+            `chartedBy: ${chartData.chartedBy || ''}`,
+            `savedAt: ${chartData.savedAt || new Date().toISOString()}`,
+            '---'
+        ];
+
+        return metadata.join('\n') + '\n' + (chartData.chart || '');
+    }
+
+    parseNNSFile(fileContent) {
+        const parts = fileContent.split('\n---\n');
+        if (parts.length < 2 || !fileContent.startsWith('---')) {
+            throw new Error('Invalid .nns file format');
+        }
+
+        const metadataSection = parts[0].replace(/^---\n/, '');
+        const metadata = {};
+
+        for (const line of metadataSection.split('\n')) {
+            const colonIndex = line.indexOf(':');
+            if (colonIndex > 0) {
+                const key = line.substring(0, colonIndex).trim();
+                const value = line.substring(colonIndex + 1).trim();
+                metadata[key] = value;
+            }
+        }
+
+        const chart = parts.slice(1).join('\n---\n').trim();
+
+        return {
+            id: metadata.savedAt || Date.now().toString(),
+            title: metadata.title || 'Untitled Chart',
+            key: metadata.key || '',
+            tempo: metadata.tempo || '',
+            time: metadata.time || '',
+            songwriter: metadata.songwriter || '',
+            chartedBy: metadata.chartedBy || '',
+            chart: chart,
+            savedAt: metadata.savedAt || new Date().toISOString()
+        };
+    }
+
+    async writeNNSFile(directoryHandle, filename, content) {
+        const fileHandle = await directoryHandle.getFileHandle(filename, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(content);
+        await writable.close();
+    }
+
+    async readNNSFile(fileHandle) {
+        const file = await fileHandle.getFile();
+        const content = await file.text();
+        return this.parseNNSFile(content);
+    }
+
+    async deleteChartFile(filename) {
+        if (!this.directoryHandle) return;
+        await this.directoryHandle.removeEntry(filename);
+    }
+
+    async loadChartsFromDirectory() {
+        if (!this.directoryHandle) return [];
+
+        const permission = await this.verifyDirectoryPermission(this.directoryHandle);
+        if (!permission) {
+            throw new Error('Permission denied');
+        }
+
+        const charts = [];
+
+        for await (const entry of this.directoryHandle.values()) {
+            if (entry.kind === 'file' && entry.name.endsWith('.nns')) {
+                try {
+                    const chartData = await this.readNNSFile(entry);
+                    charts.push(chartData);
+                } catch (error) {
+                    console.error(`Failed to read ${entry.name}:`, error);
+                }
+            }
+        }
+
+        return charts;
+    }
+
+    async saveChartToFile(chartData) {
+        if (!this.directoryHandle) return;
+
+        const filename = this.sanitizeFilename(chartData.title, chartData.songwriter) + '.nns';
+        const content = this.formatNNSFile(chartData);
+
+        await this.writeNNSFile(this.directoryHandle, filename, content);
+    }
+
+    async offerMigration() {
+        const localCharts = this.loadChartsFromLocalStorage();
+
+        if (localCharts.length === 0) return;
+
+        const shouldMigrate = confirm(
+            `Migrate ${localCharts.length} existing chart(s) from browser storage to this folder?`
+        );
+
+        if (!shouldMigrate) return;
+
+        let migrated = 0;
+
+        for (const chart of localCharts) {
+            try {
+                await this.saveChartToFile(chart);
+                migrated++;
+            } catch (error) {
+                console.error(`Failed to migrate "${chart.title}":`, error);
+            }
+        }
+
+        alert(`Migration complete! ${migrated} chart(s) saved to folder.`);
+
+        await this.loadCharts();
+        this.renderSavedCharts();
+    }
+
+    loadChartsFromLocalStorage() {
+        const saved = localStorage.getItem('nns_saved_charts');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.error('Failed to load charts:', e);
+                return [];
+            }
+        }
+        return [];
+    }
+
+    async loadCharts() {
+        try {
+            if (this.useFileSystem && this.directoryHandle) {
+                this.charts = await this.loadChartsFromDirectory();
+            } else {
+                this.charts = this.loadChartsFromLocalStorage();
+            }
+        } catch (error) {
+            console.error('Failed to load charts:', error);
+            this.charts = [];
+        }
+    }
+
+    // Directory UI methods
+    updateDirectoryUI() {
+        const storageText = document.getElementById('storage-mode-text');
+        const toggleBtn = document.getElementById('storage-toggle-btn');
+
+        if (!storageText || !toggleBtn) return;
+
+        if (this.useFileSystem && this.directoryHandle) {
+            // Using filesystem storage
+            storageText.textContent = `saving to folder ${this.directoryHandle.name}`;
+            toggleBtn.textContent = '×';
+            toggleBtn.title = 'Use browser storage instead';
+        } else {
+            // Using browser storage
+            storageText.textContent = 'saving to browser storage';
+            if (this.supportsFileSystemAccess) {
+                toggleBtn.textContent = '+';
+                toggleBtn.title = 'Use filesystem storage instead';
+                toggleBtn.style.display = 'flex';
+            } else {
+                // Hide the toggle button if File System API is not supported
+                toggleBtn.style.display = 'none';
+            }
+        }
+    }
+
+    async toggleStorageMode() {
+        if (this.useFileSystem && this.directoryHandle) {
+            // Currently using filesystem, switch to browser storage
+            await this.clearDirectory();
+        } else {
+            // Currently using browser storage, switch to filesystem
+            await this.promptForDirectory();
+            if (this.useFileSystem) {
+                // Successfully switched to filesystem
+                await this.loadCharts();
+                this.renderSavedCharts();
+            }
+        }
+    }
+
+    async clearDirectory() {
+        if (!confirm('Clear saved directory?\n\nCharts will be loaded from browser storage instead.')) {
+            return;
+        }
+
+        await this.clearDirectoryHandle();
+        this.useFileSystem = false;
+        this.directoryHandle = null;
+        this.updateDirectoryUI();
+        await this.loadCharts();
+        this.renderSavedCharts();
+    }
+
+    async openDirectoryInFinder() {
+        // File System Access API doesn't support opening in OS file manager
+        // Show helpful message instead
+        alert(
+            'To open this folder:\n\n' +
+            `1. Open Finder\n` +
+            `2. Navigate to: ${this.directoryHandle.name}\n\n` +
+            'Tip: You can bookmark this location in Finder for quick access.'
+        );
     }
 }
 
