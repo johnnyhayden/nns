@@ -1314,7 +1314,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
 
         // Create off-screen container
         const offscreen = document.createElement('div');
-        offscreen.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;width:8.1in;';
+        offscreen.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;width:8.5in;';
         document.body.appendChild(offscreen);
 
         const zip = new JSZip();
@@ -1359,7 +1359,30 @@ Tag: 1'_4''' 1''_4'_5' <1>
                     wrapper.style.borderRadius = '0';
                     wrapper.style.boxShadow = 'none';
                     wrapper.style.background = 'white';
+                    // Match exact letter page dimensions to avoid extra margins/overflow
+                    wrapper.style.width = '8.5in';
+                    wrapper.style.height = '11in';
+                    wrapper.style.minHeight = '11in';
+                    wrapper.style.padding = '0.25in';
+                    wrapper.style.boxSizing = 'border-box';
                     offscreen.appendChild(wrapper);
+
+                    // Remove column-rule (line between columns) for PDF
+                    const chartContent = wrapper.querySelector('.chart-content');
+                    if (chartContent) {
+                        chartContent.style.columnRule = 'none';
+                    }
+
+                    // Fix tied chord underlines for html2canvas compatibility
+                    // html2canvas renders text-decoration: underline poorly (too thin, intersects text)
+                    // Replace with border-bottom which renders correctly
+                    const tiedChords = wrapper.querySelectorAll('.tied-chord');
+                    tiedChords.forEach(el => {
+                        el.style.textDecoration = 'none';
+                        el.style.borderBottom = '2px solid #000';
+                        el.style.paddingBottom = '1px';
+                        el.style.display = 'inline';
+                    });
 
                     // Generate PDF blob
                     const blob = await html2pdf()
