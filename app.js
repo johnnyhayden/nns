@@ -1314,7 +1314,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
 
         // Create off-screen container
         const offscreen = document.createElement('div');
-        offscreen.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;width:8in;';
+        offscreen.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;width:8.1in;';
         document.body.appendChild(offscreen);
 
         const zip = new JSZip();
@@ -1364,7 +1364,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
                     // Generate PDF blob
                     const blob = await html2pdf()
                         .set({
-                            margin: [0.25, 0.25, 0.25, 0.25],
+                            margin: [0.15, 0.2, 0.15, 0.2],
                             filename: 'chart.pdf',
                             html2canvas: { scale: 2, useCORS: true, logging: false },
                             jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
