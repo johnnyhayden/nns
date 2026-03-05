@@ -1364,7 +1364,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
                     // Generate PDF blob
                     const blob = await html2pdf()
                         .set({
-                            margin: [0.15, 0.2, 0.15, 0.2],
+                            margin: [0.1, 0.1, 0.1, 0.1],
                             filename: 'chart.pdf',
                             html2canvas: { scale: 2, useCORS: true, logging: false },
                             jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
