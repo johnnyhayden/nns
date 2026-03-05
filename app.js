@@ -77,6 +77,12 @@ class NNSChartApp {
         this.newBtn.addEventListener('click', () => this.newChart());
         this.printBtn.addEventListener('click', () => this.printChart());
 
+        // Export All button
+        const exportAllBtn = document.getElementById('export-all-btn');
+        if (exportAllBtn) {
+            exportAllBtn.addEventListener('click', () => this.exportAllPDFs());
+        }
+
         // Demo link
         const demoLink = document.getElementById('load-demo-link');
         if (demoLink) {
@@ -1277,6 +1283,137 @@ Tag: 1'_4''' 1''_4'_5' <1>
 
     printChart() {
         window.print();
+    }
+
+    async exportAllPDFs() {
+        if (this.charts.length === 0) {
+            alert('No saved charts to export.');
+            return;
+        }
+
+        // Capture current display preferences
+        const selectedFont = this.fontSelect.value;
+        const selectedSize = this.fontSizeSelect.value;
+        const twoColumn = this.twoColumnToggle.checked;
+
+        // Show progress overlay
+        const overlay = document.getElementById('pdf-export-overlay');
+        const progressBar = document.getElementById('pdf-export-progress');
+        const statusText = document.getElementById('pdf-export-status');
+        const titleText = document.getElementById('pdf-export-title');
+        const cancelBtn = document.getElementById('pdf-export-cancel');
+
+        let cancelled = false;
+        const onCancel = () => { cancelled = true; };
+        cancelBtn.addEventListener('click', onCancel);
+
+        overlay.style.display = 'flex';
+        progressBar.style.width = '0%';
+        titleText.textContent = `Exporting ${this.charts.length} chart(s)...`;
+        statusText.textContent = 'Preparing...';
+
+        // Create off-screen container
+        const offscreen = document.createElement('div');
+        offscreen.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0;width:8in;';
+        document.body.appendChild(offscreen);
+
+        const zip = new JSZip();
+        const filenameCount = {};
+        let exported = 0;
+        let failed = 0;
+
+        try {
+            // Wait for fonts to be ready
+            await document.fonts.ready;
+
+            for (let i = 0; i < this.charts.length; i++) {
+                if (cancelled) break;
+
+                const chart = this.charts[i];
+                const pct = Math.round(((i) / this.charts.length) * 100);
+                progressBar.style.width = pct + '%';
+                statusText.textContent = `Exporting: ${chart.title || 'Untitled'} (${i + 1}/${this.charts.length})`;
+
+                try {
+                    // Build metadata
+                    const metadata = {
+                        title: chart.title || '',
+                        key: chart.key || '',
+                        tempo: chart.tempo || '',
+                        time: chart.time || '',
+                        songwriter: chart.songwriter || '',
+                        chartedBy: chart.chartedBy || ''
+                    };
+
+                    // Parse and render
+                    const { sections, headerComment } = this.parseChart(chart.chart || '');
+                    const html = this.renderChart(sections, metadata, twoColumn, headerComment);
+
+                    // Inject into off-screen container with font/size classes
+                    offscreen.innerHTML = '';
+                    const wrapper = document.createElement('div');
+                    wrapper.className = `chart-preview font-${selectedFont} size-${selectedSize}`;
+                    wrapper.innerHTML = html;
+                    offscreen.appendChild(wrapper);
+
+                    // Generate PDF blob
+                    const blob = await html2pdf()
+                        .set({
+                            margin: [0.25, 0.25, 0.25, 0.25],
+                            filename: 'chart.pdf',
+                            html2canvas: { scale: 2, useCORS: true, logging: false },
+                            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+                        })
+                        .from(wrapper)
+                        .outputPdf('blob');
+
+                    // Generate unique filename
+                    let baseName = this.sanitizeFilename(chart.title, chart.songwriter);
+                    if (filenameCount[baseName]) {
+                        filenameCount[baseName]++;
+                        baseName += '-' + filenameCount[baseName];
+                    } else {
+                        filenameCount[baseName] = 1;
+                    }
+
+                    zip.file(baseName + '.pdf', blob);
+                    exported++;
+                } catch (err) {
+                    console.error(`Failed to export "${chart.title}":`, err);
+                    failed++;
+                }
+            }
+
+            if (cancelled) {
+                statusText.textContent = 'Export cancelled.';
+                await new Promise(r => setTimeout(r, 800));
+            } else if (exported > 0) {
+                progressBar.style.width = '100%';
+                statusText.textContent = 'Generating zip file...';
+
+                const today = new Date().toISOString().slice(0, 10);
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                saveAs(zipBlob, `nns-charts-${today}.zip`);
+
+                statusText.textContent = `Done! ${exported} chart(s) exported.` +
+                    (failed > 0 ? ` ${failed} failed.` : '');
+                await new Promise(r => setTimeout(r, 1200));
+            } else {
+                statusText.textContent = 'No charts were exported.';
+                await new Promise(r => setTimeout(r, 1200));
+            }
+        } catch (err) {
+            console.error('Export failed:', err);
+            statusText.textContent = 'Export failed: ' + err.message;
+            await new Promise(r => setTimeout(r, 2000));
+        } finally {
+            // Cleanup
+            cancelBtn.removeEventListener('click', onCancel);
+            overlay.style.display = 'none';
+            if (offscreen.parentNode) {
+                offscreen.parentNode.removeChild(offscreen);
+            }
+        }
     }
 
     flashSaveButton(isError = false) {

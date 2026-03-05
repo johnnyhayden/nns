@@ -125,6 +125,7 @@
                             </select>
                         </label>
                         <button id="print-btn" class="btn btn-success">Print</button>
+                        <button id="export-all-btn" class="btn btn-export">Export All</button>
                     </div>
                 </div>
                 <div id="chart-preview" class="chart-preview"></div>
@@ -134,6 +135,25 @@
 
     <!-- Print View -->
     <div class="print-only" id="print-view"></div>
+
+    <!-- PDF Export Overlay -->
+    <div id="pdf-export-overlay" class="pdf-export-overlay" style="display:none;">
+        <div class="pdf-export-modal">
+            <h3 id="pdf-export-title">Exporting Charts...</h3>
+            <div class="pdf-export-progress-bar">
+                <div id="pdf-export-progress" class="pdf-export-progress"></div>
+            </div>
+            <p id="pdf-export-status">Preparing...</p>
+            <button id="pdf-export-cancel" class="btn">Cancel</button>
+        </div>
+    </div>
+
+    <!-- PDF Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.2/dist/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
     <script src="app.js"></script>
 </body>
