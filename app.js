@@ -1365,22 +1365,24 @@ Tag: 1'_4''' 1''_4'_5' <1>
                     wrapper.style.minHeight = '11in';
                     wrapper.style.padding = '0.25in';
                     wrapper.style.boxSizing = 'border-box';
+                    wrapper.style.overflow = 'visible';
                     offscreen.appendChild(wrapper);
 
-                    // Remove column-rule (line between columns) for PDF
+                    // Remove column-rule (line between columns) and overflow clipping for PDF
                     const chartContent = wrapper.querySelector('.chart-content');
                     if (chartContent) {
-                        chartContent.style.columnRule = 'none';
+                        chartContent.style.setProperty('column-rule', 'none', 'important');
+                        chartContent.style.overflow = 'visible';
                     }
 
                     // Fix tied chord underlines for html2canvas compatibility
-                    // html2canvas renders text-decoration: underline poorly (too thin, intersects text)
-                    // Replace with border-bottom which renders correctly
+                    // html2canvas renders text-decoration: underline too thin/intersecting
+                    // Replace with border-bottom positioned close to text
                     const tiedChords = wrapper.querySelectorAll('.tied-chord');
                     tiedChords.forEach(el => {
                         el.style.textDecoration = 'none';
                         el.style.borderBottom = '2px solid #000';
-                        el.style.paddingBottom = '1px';
+                        el.style.paddingBottom = '0';
                         el.style.display = 'inline';
                     });
 
