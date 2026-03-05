@@ -487,9 +487,14 @@ Tag: 1'_4''' 1''_4'_5' <1>
             remaining = remaining.slice(0, -1);
         }
 
+        // Check for major seventh (maj7)
+        if (remaining.endsWith('maj7')) {
+            seventh = 'maj7';
+            remaining = remaining.slice(0, -4);
+        }
         // Check for seventh
-        if (remaining.endsWith('7')) {
-            seventh = true;
+        else if (remaining.endsWith('7')) {
+            seventh = '7';
             remaining = remaining.slice(0, -1);
         }
 
@@ -642,32 +647,30 @@ Tag: 1'_4''' 1''_4'_5' <1>
 
         let chordHtml = '';
 
+        // Build modifier superscripts (diminished, seventh, suspended)
+        let modifierHtml = '';
+        if (notation.diminished) {
+            modifierHtml += '<sup class="chord-diminished">o</sup>';
+        }
+        if (notation.seventh) {
+            modifierHtml += `<sup class="chord-seventh">${this.escapeHtml(notation.seventh)}</sup>`;
+        }
+        if (notation.suspended) {
+            modifierHtml += `<sup class="chord-suspended">${this.escapeHtml(notation.suspended)}</sup>`;
+        }
+
         // Check if it's an inversion (slash chord)
         if (notation.inversion) {
-            // Render as a fraction
+            // Render as a fraction with modifiers on the top (left) side
             chordHtml += '<span class="chord-inversion">';
-            chordHtml += `<span class="inversion-top">${this.escapeHtml(notation.base)}</span>`;
+            chordHtml += `<span class="inversion-top">${this.escapeHtml(notation.base)}${modifierHtml}</span>`;
             chordHtml += '<span class="inversion-slash">/</span>';
             chordHtml += `<span class="inversion-bottom">${this.escapeHtml(notation.inversion)}</span>`;
             chordHtml += '</span>';
         } else {
             // Regular chord
             chordHtml += this.escapeHtml(notation.base);
-        }
-
-        // Add diminished if present
-        if (notation.diminished) {
-            chordHtml += '<sup class="chord-diminished">o</sup>';
-        }
-
-        // Add seventh if present
-        if (notation.seventh) {
-            chordHtml += '<sup class="chord-seventh">7</sup>';
-        }
-
-        // Add suspended if present
-        if (notation.suspended) {
-            chordHtml += `<sup class="chord-suspended">${this.escapeHtml(notation.suspended)}</sup>`;
+            chordHtml += modifierHtml;
         }
 
         // Wrap with ticks, staccato, staccato dot and/or push notation if present
@@ -713,30 +716,28 @@ Tag: 1'_4''' 1''_4'_5' <1>
 
         let chordHtml = '';
 
+        // Build modifier superscripts (diminished, seventh, suspended)
+        let modifierHtml = '';
+        if (notation.diminished) {
+            modifierHtml += '<sup class="chord-diminished">o</sup>';
+        }
+        if (notation.seventh) {
+            modifierHtml += `<sup class="chord-seventh">${this.escapeHtml(notation.seventh)}</sup>`;
+        }
+        if (notation.suspended) {
+            modifierHtml += `<sup class="chord-suspended">${this.escapeHtml(notation.suspended)}</sup>`;
+        }
+
         // Check if it's an inversion (slash chord)
         if (notation.inversion) {
             chordHtml += '<span class="chord-inversion">';
-            chordHtml += `<span class="inversion-top">${this.escapeHtml(notation.base)}</span>`;
+            chordHtml += `<span class="inversion-top">${this.escapeHtml(notation.base)}${modifierHtml}</span>`;
             chordHtml += '<span class="inversion-slash">/</span>';
             chordHtml += `<span class="inversion-bottom">${this.escapeHtml(notation.inversion)}</span>`;
             chordHtml += '</span>';
         } else {
             chordHtml += this.escapeHtml(notation.base);
-        }
-
-        // Add diminished if present
-        if (notation.diminished) {
-            chordHtml += '<sup class="chord-diminished">o</sup>';
-        }
-
-        // Add seventh if present
-        if (notation.seventh) {
-            chordHtml += '<sup class="chord-seventh">7</sup>';
-        }
-
-        // Add suspended if present
-        if (notation.suspended) {
-            chordHtml += `<sup class="chord-suspended">${this.escapeHtml(notation.suspended)}</sup>`;
+            chordHtml += modifierHtml;
         }
 
         // For tied chords, wrap with ticks, staccato, staccato dot and/or push notation using inline display
