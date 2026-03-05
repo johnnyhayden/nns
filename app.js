@@ -1354,6 +1354,11 @@ Tag: 1'_4''' 1''_4'_5' <1>
                     const wrapper = document.createElement('div');
                     wrapper.className = `chart-preview font-${selectedFont} size-${selectedSize}`;
                     wrapper.innerHTML = html;
+                    // Override decorative styles that shouldn't appear in PDF
+                    wrapper.style.border = 'none';
+                    wrapper.style.borderRadius = '0';
+                    wrapper.style.boxShadow = 'none';
+                    wrapper.style.background = 'white';
                     offscreen.appendChild(wrapper);
 
                     // Generate PDF blob
