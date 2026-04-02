@@ -1819,4 +1819,5 @@ Tag: 1'_4''' 1''_4'_5' <1>
 document.addEventListener('DOMContentLoaded', () => {
     const app = new NNSChartApp();
     app.loadAutoSave();
+    app.updatePreview();
 });
