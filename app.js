@@ -51,6 +51,7 @@ class NNSChartApp {
         this.chartPreview = document.getElementById('chart-preview');
         this.printView = document.getElementById('print-view');
         this.twoColumnToggle = document.getElementById('two-column-toggle');
+        this.lettersToggle = document.getElementById('letters-toggle');
         this.fontSelect = document.getElementById('font-select');
         this.fontSizeSelect = document.getElementById('font-size-select');
 
@@ -73,6 +74,7 @@ class NNSChartApp {
         this.chartedByInput.addEventListener('input', () => this.updatePreview());
         this.chartInput.addEventListener('input', (e) => this.handleChartInput(e));
         this.twoColumnToggle.addEventListener('change', () => this.updatePreview());
+        this.lettersToggle.addEventListener('change', () => this.updatePreview());
         this.fontSelect.addEventListener('change', () => this.updatePreview());
         this.fontSizeSelect.addEventListener('change', () => this.updatePreview());
 
@@ -541,6 +543,50 @@ Tag: 1'_4''' 1''_4'_5' <1>
         };
     }
 
+    // Chord letter display: converts NNS numbers to letter names in the chart's key.
+    // Minor keys (e.g. "Em") are numbered from their relative major (6- = Em), so 1 = G.
+    parseKey(keyStr) {
+        const match = (keyStr || '').trim().match(/^([A-Ga-g])([#♯b♭]?)\s*(m|min|minor|-)?$/i);
+        if (!match) return null;
+
+        const letterIndex = 'CDEFGAB'.indexOf(match[1].toUpperCase());
+        const accidental = match[2] === '#' || match[2] === '♯' ? 1 : match[2] ? -1 : 0;
+        let pitch = [0, 2, 4, 5, 7, 9, 11][letterIndex] + accidental;
+        let tonicLetter = letterIndex;
+
+        if (match[3]) {
+            // Relative major is a minor third up, two letter names higher
+            pitch += 3;
+            tonicLetter += 2;
+        }
+        return { pitch: ((pitch % 12) + 12) % 12, letterIndex: tonicLetter % 7 };
+    }
+
+    numberToNoteName(accidental, degree) {
+        const key = this.letterKey;
+        const letterIndex = (key.letterIndex + degree - 1) % 7;
+        const target = key.pitch + [0, 2, 4, 5, 7, 9, 11][degree - 1] + (accidental === '#' ? 1 : accidental === 'b' ? -1 : 0);
+        const natural = [0, 2, 4, 5, 7, 9, 11][letterIndex];
+        // Signed distance from the natural letter, in the range -6..5
+        const diff = ((target - natural) % 12 + 18) % 12 - 6;
+        const accidentals = { '-2': 'bb', '-1': 'b', '0': '', '1': '#', '2': '##' };
+        return 'CDEFGAB'[letterIndex] + (accidentals[diff] ?? '');
+    }
+
+    displayChordBase(base) {
+        if (!this.letterKey || !base) return base;
+        const match = base.match(/^([#b]?)([1-7])(-?)$/);
+        if (!match) return base;
+        return this.numberToNoteName(match[1], parseInt(match[2], 10)) + match[3];
+    }
+
+    displayBassNote(bass) {
+        if (!this.letterKey || !bass) return bass;
+        const match = bass.match(/^([#b]?)([1-7])$/);
+        if (!match) return bass;
+        return this.numberToNoteName(match[1], parseInt(match[2], 10));
+    }
+
     parseBars(barText) {
         // Parse all beats from the text
         const parts = barText.split(/\s+/).filter(p => p);
@@ -687,13 +733,13 @@ Tag: 1'_4''' 1''_4'_5' <1>
         if (notation.inversion) {
             // Render as a fraction with modifiers on the top (left) side
             chordHtml += '<span class="chord-inversion">';
-            chordHtml += `<span class="inversion-top">${this.escapeHtml(notation.base)}${modifierHtml}</span>`;
+            chordHtml += `<span class="inversion-top">${this.escapeHtml(this.displayChordBase(notation.base))}${modifierHtml}</span>`;
             chordHtml += '<span class="inversion-slash">/</span>';
-            chordHtml += `<span class="inversion-bottom">${this.escapeHtml(notation.inversion)}</span>`;
+            chordHtml += `<span class="inversion-bottom">${this.escapeHtml(this.displayBassNote(notation.inversion))}</span>`;
             chordHtml += '</span>';
         } else {
             // Regular chord
-            chordHtml += this.escapeHtml(notation.base);
+            chordHtml += this.escapeHtml(this.displayChordBase(notation.base));
             chordHtml += modifierHtml;
         }
 
@@ -755,12 +801,12 @@ Tag: 1'_4''' 1''_4'_5' <1>
         // Check if it's an inversion (slash chord)
         if (notation.inversion) {
             chordHtml += '<span class="chord-inversion">';
-            chordHtml += `<span class="inversion-top">${this.escapeHtml(notation.base)}${modifierHtml}</span>`;
+            chordHtml += `<span class="inversion-top">${this.escapeHtml(this.displayChordBase(notation.base))}${modifierHtml}</span>`;
             chordHtml += '<span class="inversion-slash">/</span>';
-            chordHtml += `<span class="inversion-bottom">${this.escapeHtml(notation.inversion)}</span>`;
+            chordHtml += `<span class="inversion-bottom">${this.escapeHtml(this.displayBassNote(notation.inversion))}</span>`;
             chordHtml += '</span>';
         } else {
-            chordHtml += this.escapeHtml(notation.base);
+            chordHtml += this.escapeHtml(this.displayChordBase(notation.base));
             chordHtml += modifierHtml;
         }
 
@@ -842,6 +888,9 @@ Tag: 1'_4''' 1''_4'_5' <1>
     }
 
     renderChart(sections, metadata, twoColumn = false, headerComment = null) {
+        // Chord letters are rendered in this chart's key when the Letters toggle is on
+        this.letterKey = this.lettersToggle.checked ? this.parseKey(metadata.key) : null;
+
         let html = '';
 
         // Render header with key/time on left, title centered, tempo on right
@@ -981,7 +1030,8 @@ Tag: 1'_4''' 1''_4'_5' <1>
 
                         // Wrap beat with repeat symbols if needed
                         if (startRepeatHtml || endRepeatHtml) {
-                            html += `<span class="${beatClasses} beat-with-repeat">${startRepeatHtml}${chordHtml}${endRepeatHtml}</span>`;
+                            // Anchor symbols to the chord text's own edges so wide (tied) chords don't overlap them
+                            html += `<span class="${beatClasses} beat-with-repeat"><span class="repeat-anchor">${startRepeatHtml}${chordHtml}${endRepeatHtml}</span></span>`;
                         } else {
                             html += `<span class="${beatClasses}">${chordHtml}</span>`;
                         }
@@ -1035,8 +1085,8 @@ Tag: 1'_4''' 1''_4'_5' <1>
         this.printView.innerHTML = html;
 
         // Apply font and size classes
-        this.chartPreview.className = `chart-preview font-${selectedFont} size-${selectedSize}`;
-        this.printView.className = `print-only font-${selectedFont} size-${selectedSize}`;
+        this.chartPreview.className = `chart-preview font-${selectedFont} size-${selectedSize}${this.lettersToggle.checked ? ' letters-mode' : ''}`;
+        this.printView.className = `print-only font-${selectedFont} size-${selectedSize}${this.lettersToggle.checked ? ' letters-mode' : ''}`;
 
         // Update document title for PDF filename
         if (metadata.title && metadata.title.trim()) {
@@ -1063,6 +1113,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
             chartedBy: this.chartedByInput.value,
             chart: this.chartInput.value,
             twoColumn: this.twoColumnToggle.checked,
+            letters: this.lettersToggle.checked,
             font: this.fontSelect.value,
             fontSize: this.fontSizeSelect.value
         };
@@ -1082,6 +1133,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
                 this.chartedByInput.value = data.chartedBy || '';
                 this.chartInput.value = data.chart || '';
                 this.twoColumnToggle.checked = data.twoColumn !== undefined ? data.twoColumn : true;
+                this.lettersToggle.checked = !!data.letters;
                 this.fontSelect.value = data.font || 'handwriting';
                 this.fontSizeSelect.value = data.fontSize || 'large';
             } catch (e) {
@@ -1374,7 +1426,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
                     // Inject into off-screen container with font/size classes
                     offscreen.innerHTML = '';
                     const wrapper = document.createElement('div');
-                    wrapper.className = `chart-preview font-${selectedFont} size-${selectedSize}`;
+                    wrapper.className = `chart-preview font-${selectedFont} size-${selectedSize}${this.lettersToggle.checked ? ' letters-mode' : ''}`;
                     wrapper.innerHTML = html;
                     // Override decorative styles that shouldn't appear in PDF
                     wrapper.style.border = 'none';

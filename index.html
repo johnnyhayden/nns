@@ -92,6 +92,7 @@
                         <li>Staccato accent: 5^ (shows ^ above chord)</li>
                         <li>Staccato dot: 5* (shows • above chord)</li>
                         <li>Beat ticks: 1'_4''' (1 beat on 1, 3 beats on 4 - ticks shown above)</li>
+                        <li>Letters toggle: shows chord letters in the Key (e.g. Key G: 1 4 5 6- → G C D E-); minor keys like Em are numbered from the relative major (G)</li>
                     </ul>
                     <p style="margin-top: 15px; text-align: center;">
                         <a href="#" id="load-demo-link" style="color: #007bff; font-weight: bold; text-decoration: none;">Load Demo Chart</a>
@@ -108,10 +109,16 @@
                     <div class="button-group">
                         <button id="save-chart-btn" class="btn btn-primary">Save Chart</button>
                         <button id="new-chart-btn" class="btn">New Chart</button>
-                        <label class="column-toggle">
-                            <input type="checkbox" id="two-column-toggle" checked>
-                            2 col
-                        </label>
+                        <div class="toggle-stack">
+                            <label class="column-toggle">
+                                <input type="checkbox" id="two-column-toggle" checked>
+                                2 col
+                            </label>
+                            <label class="column-toggle" title="Show chord letters in the chart's key instead of numbers">
+                                <input type="checkbox" id="letters-toggle">
+                                Letters
+                            </label>
+                        </div>
                         <label class="font-select-label">
                             Font:
                             <select id="font-select">
