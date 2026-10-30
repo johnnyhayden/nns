@@ -1239,3 +1239,47 @@ header h1 {
         grid-template-columns: 1fr;
     }
 }
+
+/* Account / Google sign-in */
+.auth-area {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+    min-height: 0;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: #666;
+}
+
+.auth-area:empty {
+    display: none;
+}
+
+.auth-user {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.auth-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+}
+
+.auth-signout-btn {
+    background: none;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 3px 10px;
+    font-size: 12px;
+    color: #555;
+    cursor: pointer;
+}
+
+.auth-signout-btn:hover {
+    border-color: #999;
+    color: #222;
+}

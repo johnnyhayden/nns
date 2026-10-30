@@ -8,6 +8,8 @@ class NNSChartApp {
         this.useFileSystem = false;
         this.indexedDB = null;
         this.charts = [];
+        this.user = null;
+        this.useCloud = false;
 
         this.initializeElements();
         this.attachEventListeners();
@@ -17,7 +19,9 @@ class NNSChartApp {
     }
 
     async initAsync() {
-        if (this.supportsFileSystemAccess) {
+        await this.initAuth();
+
+        if (this.supportsFileSystemAccess && !this.useCloud) {
             try {
                 await this.initIndexedDB();
                 await this.loadDirectoryHandleFromDB();
@@ -100,13 +104,21 @@ class NNSChartApp {
     }
 
     loadDemo() {
-        this.titleInput.value = 'My Demo Song';
-        this.keyInput.value = 'C';
-        this.tempoInput.value = '120';
-        this.timeInput.value = '4/4';
-        this.songwriterInput.value = 'Larry Laffer';
-        this.chartedByInput.value = 'John Hayden';
+        const demo = this.getDemoChartData();
+        this.titleInput.value = demo.title;
+        this.keyInput.value = demo.key;
+        this.tempoInput.value = demo.tempo;
+        this.timeInput.value = demo.time;
+        this.songwriterInput.value = demo.songwriter;
+        this.chartedByInput.value = demo.chartedBy;
+        this.chartInput.value = demo.chart;
+        this.twoColumnToggle.checked = true;
+        this.fontSelect.value = 'handwriting';
+        this.fontSizeSelect.value = 'large';
+        this.updatePreview();
+    }
 
+    getDemoChartData() {
         const demoChart = `#This is a demonstration chart showing various notation features
 I: 1 5 6- 4
 I: 1 5 6- 4
@@ -142,11 +154,17 @@ C: 1 5 6- 4
 Tag: 1'_4''' 1''_4'_5' <1>
 #Beat tick marks, ending on diamond`;
 
-        this.chartInput.value = demoChart;
-        this.twoColumnToggle.checked = true;
-        this.fontSelect.value = 'handwriting';
-        this.fontSizeSelect.value = 'large';
-        this.updatePreview();
+        return {
+            id: 'demo',
+            title: 'My Demo Song',
+            key: 'C',
+            tempo: '120',
+            time: '4/4',
+            songwriter: 'Larry Laffer',
+            chartedBy: 'John Hayden',
+            chart: demoChart,
+            savedAt: new Date().toISOString()
+        };
     }
 
     handleChartInput(e) {
@@ -1074,7 +1092,7 @@ Tag: 1'_4''' 1''_4'_5' <1>
 
     async saveChart() {
         // Check if we should prompt for directory
-        if (this.supportsFileSystemAccess && !this.useFileSystem && !this.directoryHandle) {
+        if (!this.useCloud && this.supportsFileSystemAccess && !this.useFileSystem && !this.directoryHandle) {
             const shouldUseFS = confirm(
                 'Save charts to a folder on your computer?\n\n' +
                 'Benefits:\n' +
@@ -1111,7 +1129,9 @@ Tag: 1'_4''' 1''_4'_5' <1>
         };
 
         try {
-            if (this.useFileSystem) {
+            if (this.useCloud) {
+                await this.cloudRequest('PUT', '/api/charts', { chart: chartData });
+            } else if (this.useFileSystem) {
                 await this.saveChartToFile(chartData);
             } else {
                 this.saveChartToLocalStorage(chartData);
@@ -1197,7 +1217,9 @@ Tag: 1'_4''' 1''_4'_5' <1>
         if (!confirm(`Delete chart "${chart.title}"?`)) return;
 
         try {
-            if (this.useFileSystem) {
+            if (this.useCloud) {
+                await this.cloudRequest('DELETE', `/api/charts?id=${encodeURIComponent(chartId)}`);
+            } else if (this.useFileSystem) {
                 const filename = this.sanitizeFilename(chart.title, chart.songwriter) + '.nns';
                 await this.deleteChartFile(filename);
             } else {
@@ -1738,7 +1760,9 @@ Tag: 1'_4''' 1''_4'_5' <1>
 
     async loadCharts() {
         try {
-            if (this.useFileSystem && this.directoryHandle) {
+            if (this.useCloud) {
+                this.charts = await this.loadChartsFromCloud();
+            } else if (this.useFileSystem && this.directoryHandle) {
                 this.charts = await this.loadChartsFromDirectory();
             } else {
                 this.charts = this.loadChartsFromLocalStorage();
@@ -1749,6 +1773,116 @@ Tag: 1'_4''' 1''_4'_5' <1>
         }
     }
 
+    // Google sign-in and per-account cloud storage (see api/auth.js, api/charts.js)
+    async initAuth() {
+        let config;
+        try {
+            const res = await fetch('/api/auth', { credentials: 'same-origin' });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            config = await res.json();
+        } catch (error) {
+            // No API available (e.g. opened from file://) - stay in local mode
+            console.warn('Sign-in unavailable:', error);
+            return;
+        }
+
+        this.user = config.user;
+        this.useCloud = !!this.user;
+        this.renderAuthUI(config.googleClientId);
+    }
+
+    renderAuthUI(googleClientId) {
+        const authArea = document.getElementById('auth-area');
+        if (!authArea) return;
+
+        if (this.user) {
+            authArea.innerHTML = `
+                <span class="auth-user">
+                    ${this.user.picture ? `<img class="auth-avatar" src="${this.escapeHtml(this.user.picture)}" alt="" referrerpolicy="no-referrer">` : ''}
+                    <span>${this.escapeHtml(this.user.email || this.user.name)}</span>
+                </span>
+                <button id="sign-out-btn" class="auth-signout-btn">Sign out</button>
+            `;
+            document.getElementById('sign-out-btn').addEventListener('click', () => this.signOut());
+            return;
+        }
+
+        if (!googleClientId) return;
+        authArea.innerHTML = '<span class="auth-hint">Sign in to keep your charts on every device</span><div id="google-signin-btn"></div>';
+
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.onload = () => {
+            google.accounts.id.initialize({
+                client_id: googleClientId,
+                callback: (response) => this.handleGoogleCredential(response.credential)
+            });
+            google.accounts.id.renderButton(document.getElementById('google-signin-btn'), {
+                theme: 'outline', size: 'medium', text: 'signin_with', shape: 'pill'
+            });
+        };
+        document.head.appendChild(script);
+    }
+
+    async handleGoogleCredential(credential) {
+        try {
+            const res = await fetch('/api/auth', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential })
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            window.location.reload();
+        } catch (error) {
+            console.error('Sign-in failed:', error);
+            alert('Sign-in failed. Please try again.');
+        }
+    }
+
+    async signOut() {
+        try {
+            await fetch('/api/auth', { method: 'DELETE', credentials: 'same-origin' });
+        } catch (error) {
+            console.error('Sign-out failed:', error);
+        }
+        if (window.google?.accounts?.id) google.accounts.id.disableAutoSelect();
+        window.location.reload();
+    }
+
+    async cloudRequest(method, url, body) {
+        const res = await fetch(url, {
+            method,
+            credentials: 'same-origin',
+            headers: body ? { 'Content-Type': 'application/json' } : undefined,
+            body: body ? JSON.stringify(body) : undefined
+        });
+        if (res.status === 401) {
+            alert('Your session has expired. Please sign in again.');
+            window.location.reload();
+            throw new Error('Not signed in');
+        }
+        if (!res.ok) throw new Error(`Server error (HTTP ${res.status})`);
+        return res.json();
+    }
+
+    async loadChartsFromCloud() {
+        const { charts, initialized } = await this.cloudRequest('GET', '/api/charts');
+        if (initialized) return charts;
+
+        // First sign-in for this account: seed the demo chart and offer to bring over local charts
+        const imported = [this.getDemoChartData()];
+        const localCharts = this.loadChartsFromLocalStorage();
+        if (localCharts.length > 0 && confirm(
+            `Copy ${localCharts.length} chart(s) saved in this browser into your account?`
+        )) {
+            imported.push(...localCharts);
+        }
+        await this.cloudRequest('POST', '/api/charts', { charts: imported });
+        return (await this.cloudRequest('GET', '/api/charts')).charts;
+    }
+
     // Directory UI methods
     updateDirectoryUI() {
         const storageText = document.getElementById('storage-mode-text');
@@ -1756,7 +1890,10 @@ Tag: 1'_4''' 1''_4'_5' <1>
 
         if (!storageText || !toggleBtn) return;
 
-        if (this.useFileSystem && this.directoryHandle) {
+        if (this.useCloud) {
+            storageText.textContent = 'saved to your account';
+            toggleBtn.style.display = 'none';
+        } else if (this.useFileSystem && this.directoryHandle) {
             // Using filesystem storage
             storageText.textContent = `saving to folder ${this.directoryHandle.name}`;
             toggleBtn.textContent = '×';
